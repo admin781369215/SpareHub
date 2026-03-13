@@ -1,0 +1,5 @@
+{
+  "name": "SpareHub",
+  "description": "A platform connecting customers with auto parts shops. Search for parts by name or number, and allow shops to manage their inventory and respond to customer requests.",
+  "requestFramePermissions": []
+}

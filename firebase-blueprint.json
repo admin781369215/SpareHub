@@ -1,0 +1,158 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the application, either a customer or a shop owner.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "User's unique ID" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["customer", "shop_owner", "admin"], "description": "Role of the user" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Shop": {
+      "title": "Shop",
+      "description": "An auto parts shop.",
+      "type": "object",
+      "properties": {
+        "ownerUid": { "type": "string", "description": "UID of the shop owner" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "city": { "type": "string" },
+        "location": { "type": "string", "description": "Address or coordinates" },
+        "rating": { "type": "number" },
+        "reviewCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerUid", "name", "phone", "city", "createdAt"]
+    },
+    "Part": {
+      "title": "Part",
+      "description": "An auto part listed by a shop.",
+      "type": "object",
+      "properties": {
+        "shopId": { "type": "string" },
+        "partNumber": { "type": "string" },
+        "partName": { "type": "string" },
+        "carMake": { "type": "string" },
+        "carModel": { "type": "string" },
+        "year": { "type": "number" },
+        "manufacturer": { "type": "string" },
+        "condition": { "type": "string", "enum": ["new", "used"] },
+        "price": { "type": "number" },
+        "quantity": { "type": "number" },
+        "imageUrls": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["shopId", "partNumber", "partName", "price", "quantity", "createdAt"]
+    },
+    "PartRequest": {
+      "title": "PartRequest",
+      "description": "A request made by a customer when a part is not found.",
+      "type": "object",
+      "properties": {
+        "customerUid": { "type": "string" },
+        "partNumber": { "type": "string" },
+        "partName": { "type": "string" },
+        "carModel": { "type": "string" },
+        "status": { "type": "string", "enum": ["open", "fulfilled", "closed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["customerUid", "partName", "status", "createdAt"]
+    },
+    "RequestResponse": {
+      "title": "RequestResponse",
+      "description": "A response from a shop to a customer's part request.",
+      "type": "object",
+      "properties": {
+        "requestId": { "type": "string" },
+        "shopId": { "type": "string" },
+        "price": { "type": "number" },
+        "quantity": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["requestId", "shopId", "price", "quantity", "status", "createdAt"]
+    },
+    "SavedPart": {
+      "title": "SavedPart",
+      "description": "A part saved by a user to their wishlist.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "partId": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["userId", "partId", "createdAt"]
+    },
+    "AppNotification": {
+      "title": "AppNotification",
+      "description": "In-app notification for a user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "read": { "type": "boolean" },
+        "type": { "type": "string", "enum": ["request_response", "general"] },
+        "relatedId": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["userId", "title", "message", "read", "type", "createdAt"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "A review and rating left by a customer for a shop.",
+      "type": "object",
+      "properties": {
+        "shopId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["shopId", "userId", "userName", "rating", "comment", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/shops/{shopId}": {
+      "schema": { "$ref": "#/entities/Shop" },
+      "description": "Registered shops"
+    },
+    "/parts/{partId}": {
+      "schema": { "$ref": "#/entities/Part" },
+      "description": "Inventory of parts"
+    },
+    "/partRequests/{requestId}": {
+      "schema": { "$ref": "#/entities/PartRequest" },
+      "description": "Customer requests for parts"
+    },
+    "/requestResponses/{responseId}": {
+      "schema": { "$ref": "#/entities/RequestResponse" },
+      "description": "Shop responses to part requests"
+    },
+    "/savedParts/{savedPartId}": {
+      "schema": { "$ref": "#/entities/SavedPart" },
+      "description": "Parts saved by users to their wishlist"
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/AppNotification" },
+      "description": "In-app notifications for users"
+    },
+    "/reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/Review" },
+      "description": "Reviews and ratings for shops"
+    }
+  }
+}

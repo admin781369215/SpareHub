@@ -1,7 +1,8 @@
 import React from 'react';
 import { Part, Shop } from '../types';
-import { Heart, Star } from 'lucide-react';
+import { Heart, Star, ShoppingBag } from 'lucide-react';
 import { CAR_LOGOS } from '../utils/carData';
+import { useCart } from '../contexts/CartContext';
 
 interface ProductGridItemProps {
   key?: React.Key;
@@ -13,6 +14,7 @@ interface ProductGridItemProps {
 
 export function ProductGridItem({ part, isSaved, onToggleSave, onClick }: ProductGridItemProps) {
   const carLogo = part.carMake ? CAR_LOGOS[part.carMake] : null;
+  const { addToCart } = useCart();
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-brand-border overflow-hidden hover:shadow-lg transition-all duration-300 group flex flex-col h-full">
@@ -87,12 +89,21 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick }: Produc
             <span className="text-xs text-brand-secondary">السعر</span>
             <span className="text-xl font-bold text-brand-primary">${part.price}</span>
           </div>
-          <button 
-            onClick={() => onClick(part)}
-            className="bg-brand-bg text-brand-dark hover:bg-brand-primary hover:text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors"
-          >
-            التفاصيل
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => onClick(part)}
+              className="bg-brand-bg text-brand-dark hover:bg-brand-primary hover:text-white px-3 py-2 rounded-lg text-xs font-bold transition-colors"
+            >
+              التفاصيل
+            </button>
+            <button 
+              onClick={() => addToCart(part)}
+              className="bg-brand-primary text-white hover:bg-brand-primary-hover px-3 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1"
+            >
+              <ShoppingBag className="w-3 h-3" />
+              أضف
+            </button>
+          </div>
         </div>
       </div>
     </div>

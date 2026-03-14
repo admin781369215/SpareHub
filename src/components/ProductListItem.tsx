@@ -1,7 +1,8 @@
 import React from 'react';
 import { Part, Shop } from '../types';
-import { Heart, Phone, MapPin, Package, Store, Eye, Car } from 'lucide-react';
+import { Heart, Phone, MapPin, Package, Store, Eye, Car, ShoppingBag } from 'lucide-react';
 import { CAR_LOGOS } from '../utils/carData';
+import { useCart } from '../contexts/CartContext';
 
 interface ProductListItemProps {
   key?: React.Key;
@@ -13,6 +14,7 @@ interface ProductListItemProps {
 
 export function ProductListItem({ part, isSaved, onToggleSave, onImageClick }: ProductListItemProps) {
   const carLogo = part.carMake ? CAR_LOGOS[part.carMake] : null;
+  const { addToCart } = useCart();
 
   return (
     <div 
@@ -110,16 +112,13 @@ export function ProductListItem({ part, isSaved, onToggleSave, onImageClick }: P
 
       {/* Bottom Actions */}
       <div className="flex border-t border-gray-100 p-2 gap-2 bg-brand-bg">
-        {part.shop?.phone && (
-          <a 
-            href={`tel:${part.shop.phone}`} 
-            onClick={(e) => e.stopPropagation()}
-            className="flex-1 flex items-center justify-center gap-1.5 bg-brand-primary/10 text-brand-primary py-2 rounded-lg text-sm font-bold hover:bg-brand-primary/20 transition-colors"
-          >
-            <Phone className="w-4 h-4" />
-            اتصال
-          </a>
-        )}
+        <button 
+          onClick={(e) => { e.stopPropagation(); addToCart(part); }}
+          className="flex-1 flex items-center justify-center gap-1.5 bg-brand-primary text-white py-2 rounded-lg text-sm font-bold hover:bg-brand-primary-hover transition-colors"
+        >
+          <ShoppingBag className="w-4 h-4" />
+          أضف
+        </button>
         <button 
           onClick={(e) => { e.stopPropagation(); onImageClick(part); }}
           className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-brand-border text-brand-dark py-2 rounded-lg text-sm font-bold hover:bg-brand-bg transition-colors"

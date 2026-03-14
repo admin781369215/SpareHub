@@ -8,6 +8,7 @@ import { Plus, Edit2, Trash2, Package, Tag, DollarSign, Hash, MessageCircle, Che
 import { handleFirestoreError, OperationType } from '../utils/firestore-errors';
 import { CAR_MAKES, CAR_MODELS, getYears } from '../utils/carData';
 import { LocationPicker } from './LocationPicker';
+import { EditPartModal } from './EditPartModal';
 
 export function ShopDashboard() {
   const { user } = useAuth();
@@ -15,7 +16,11 @@ export function ShopDashboard() {
   const [parts, setParts] = useState<Part[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddingPart, setIsAddingPart] = useState(false);
+  const [editingPart, setEditingPart] = useState<Part | null>(null);
   const [activeTab, setActiveTab] = useState<'inventory' | 'requests' | 'settings'>('inventory');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [conditionFilter, setConditionFilter] = useState<'all' | 'new' | 'used'>('all');
+  const [availabilityFilter, setAvailabilityFilter] = useState<'all' | 'inStock' | 'outOfStock'>('all');
   
   // Requests State
   const [customerRequests, setCustomerRequests] = useState<PartRequest[]>([]);
@@ -109,8 +114,7 @@ export function ShopDashboard() {
     return () => unsubscribeShop();
   }, [user]);
 
-  const handleAddPart = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const savePart = async (keepOpen: boolean) => {
     if (!shop || !newPart.partName || !newPart.partNumber || newPart.price <= 0 || newPart.quantity < 0) return;
 
     setUploadingImages(true);
@@ -135,7 +139,10 @@ export function ShopDashboard() {
       }
 
       await addDoc(collection(db, 'parts'), partData);
-      setIsAddingPart(false);
+      
+      if (!keepOpen) {
+        setIsAddingPart(false);
+      }
       setNewPart({ partNumber: '', partName: '', carMake: '', carModel: '', manufacturer: '', price: 0, quantity: 1 });
       setImageFiles([]);
     } catch (error) {
@@ -143,6 +150,11 @@ export function ShopDashboard() {
     } finally {
       setUploadingImages(false);
     }
+  };
+
+  const handleAddPart = (e: React.FormEvent) => {
+    e.preventDefault();
+    savePart(false);
   };
 
   const downloadCsvTemplate = () => {
@@ -219,13 +231,18 @@ export function ShopDashboard() {
     setImageFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const [partToDelete, setPartToDelete] = useState<string | null>(null);
+
   const handleDeletePart = async (partId: string) => {
-    if (window.confirm('Are you sure you want to delete this part?')) {
-      try {
-        await deleteDoc(doc(db, 'parts', partId));
-      } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `parts/${partId}`);
-      }
+    console.log('Attempting to delete part:', partId);
+    try {
+      console.log('Confirmed deletion for:', partId);
+      await deleteDoc(doc(db, 'parts', partId));
+      console.log('Deleted successfully');
+      setPartToDelete(null);
+    } catch (error) {
+      console.error('Error deleting part:', error);
+      handleFirestoreError(error, OperationType.DELETE, `parts/${partId}`);
     }
   };
 
@@ -629,6 +646,14 @@ export function ShopDashboard() {
                   إلغاء
                 </button>
                 <button
+                  type="button"
+                  onClick={() => savePart(true)}
+                  disabled={uploadingImages}
+                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-brand-primary bg-brand-primary/10 hover:bg-brand-primary/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary disabled:opacity-50"
+                >
+                  {uploadingImages ? 'جاري الحفظ...' : 'حفظ وإضافة قطعة أخرى'}
+                </button>
+                <button
                   type="submit"
                   disabled={uploadingImages}
                   className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary disabled:opacity-50"
@@ -641,8 +666,67 @@ export function ShopDashboard() {
         </div>
       )}
 
+      {editingPart && (
+        <EditPartModal 
+          part={editingPart} 
+          onClose={() => setEditingPart(null)} 
+        />
+      )}
+
+      {partToDelete && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+            <h3 className="text-lg font-medium text-brand-dark mb-4">تأكيد الحذف</h3>
+            <p className="text-sm text-gray-500 mb-6">هل أنت متأكد من حذف هذه القطعة؟ لا يمكن التراجع عن هذا الإجراء.</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setPartToDelete(null)}
+                className="bg-white py-2 px-4 border border-brand-border rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-brand-bg"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={() => handleDeletePart(partToDelete)}
+                className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+              >
+                حذف
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'inventory' && (
         <div className="flex flex-col">
+          {/* Search and Filters */}
+          <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <input
+              type="text"
+              placeholder="البحث بالاسم أو رقم القطعة..."
+              className="px-3 py-2 border border-brand-border rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary sm:text-sm"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <select
+              className="px-3 py-2 border border-brand-border rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary sm:text-sm"
+              value={conditionFilter}
+              onChange={(e) => setConditionFilter(e.target.value as 'all' | 'new' | 'used')}
+            >
+              <option value="all">كل الحالات</option>
+              <option value="new">جديد</option>
+              <option value="used">مستعمل</option>
+            </select>
+            <select
+              className="px-3 py-2 border border-brand-border rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary sm:text-sm"
+              value={availabilityFilter}
+              onChange={(e) => setAvailabilityFilter(e.target.value as 'all' | 'inStock' | 'outOfStock')}
+            >
+              <option value="all">كل التوافر</option>
+              <option value="inStock">متوفر</option>
+              <option value="outOfStock">غير متوفر</option>
+            </select>
+          </div>
+
           <div className="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
             <div className="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
               <div className="shadow overflow-hidden border-b border-brand-border sm:rounded-lg">
@@ -667,14 +751,32 @@ export function ShopDashboard() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {parts.length === 0 ? (
+                    {parts
+                      .filter(part => {
+                        const matchesSearch = part.partName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                              part.partNumber.toLowerCase().includes(searchQuery.toLowerCase());
+                        const matchesCondition = conditionFilter === 'all' || part.condition === conditionFilter;
+                        const matchesAvailability = availabilityFilter === 'all' || 
+                                                    (availabilityFilter === 'inStock' ? part.quantity > 0 : part.quantity === 0);
+                        return matchesSearch && matchesCondition && matchesAvailability;
+                      })
+                      .length === 0 ? (
                       <tr>
                         <td colSpan={5} className="px-6 py-10 text-center text-sm text-brand-secondary">
-                          لا توجد قطع في المخزون. أضف قطعتك الأولى أعلاه.
+                          لا توجد قطع تطابق معايير البحث.
                         </td>
                       </tr>
                     ) : (
-                      parts.map((part) => (
+                      parts
+                        .filter(part => {
+                          const matchesSearch = part.partName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                                part.partNumber.toLowerCase().includes(searchQuery.toLowerCase());
+                          const matchesCondition = conditionFilter === 'all' || part.condition === conditionFilter;
+                          const matchesAvailability = availabilityFilter === 'all' || 
+                                                      (availabilityFilter === 'inStock' ? part.quantity > 0 : part.quantity === 0);
+                          return matchesSearch && matchesCondition && matchesAvailability;
+                        })
+                        .map((part) => (
                         <tr key={part.id}>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
@@ -713,10 +815,10 @@ export function ShopDashboard() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
-                            <button className="text-brand-primary hover:text-brand-primary-hover me-4">
+                            <button onClick={() => setEditingPart(part)} className="text-brand-primary hover:text-brand-primary-hover me-4">
                               <Edit2 className="h-4 w-4" />
                             </button>
-                            <button onClick={() => handleDeletePart(part.id)} className="text-red-600 hover:text-red-900">
+                            <button onClick={() => { console.log('Delete button clicked for:', part.id); setPartToDelete(part.id); }} className="text-red-600 hover:text-red-900 relative z-10">
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </td>

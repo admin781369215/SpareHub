@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { LogOut, User as UserIcon, Settings, Wrench, Store, ClipboardList, Menu, Search, Heart, ShoppingCart, ShieldCheck, Phone, Mail } from 'lucide-react';
+import { useCart } from '../contexts/CartContext';
+import { LogOut, User as UserIcon, Settings, Wrench, Store, ClipboardList, Menu, Search, Heart, ShoppingCart, ShieldCheck, Phone, Mail, Bell } from 'lucide-react';
 
 export function Header() {
   const { user, dbUser, signIn, logout } = useAuth();
+  const { items } = useCart();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -84,6 +86,27 @@ export function Header() {
 
           {/* Icons */}
           <div className="hidden md:flex items-center gap-6">
+            {/* Cart */}
+            <button onClick={() => window.dispatchEvent(new CustomEvent('open-cart'))} className="relative text-white hover:text-brand-primary transition-colors">
+              <ShoppingCart className="h-6 w-6" />
+              {items.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-brand-primary text-brand-dark text-[10px] font-bold h-5 w-5 rounded-full flex items-center justify-center">
+                  {items.length}
+                </span>
+              )}
+            </button>
+            
+            {/* Notifications */}
+            <div className="relative">
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('toggle-notifications'))}
+                className="relative text-white hover:text-brand-primary transition-colors"
+              >
+                <Bell className="h-6 w-6" />
+                {/* Note: Unread count logic needs to be handled or passed here */}
+              </button>
+            </div>
+
             {/* User */}
             {user ? (
               <div className="relative group cursor-pointer flex items-center gap-2">
@@ -99,7 +122,11 @@ export function Header() {
                   {dbUser?.role === 'shop_owner' ? (
                     <Link to="/shop" className="block px-4 py-2 text-sm text-brand-dark hover:bg-brand-bg">لوحة التحكم</Link>
                   ) : (
-                    <Link to="/register-shop" className="block px-4 py-2 text-sm text-brand-dark hover:bg-brand-bg">سجل متجرك</Link>
+                    <>
+                      <Link to="/my-requests" className="block px-4 py-2 text-sm text-brand-dark hover:bg-brand-bg">طلباتي</Link>
+                      <Link to="/my-orders" className="block px-4 py-2 text-sm text-brand-dark hover:bg-brand-bg">سجل الطلبات</Link>
+                      <Link to="/register-shop" className="block px-4 py-2 text-sm text-brand-dark hover:bg-brand-bg">سجل متجرك</Link>
+                    </>
                   )}
                   <button onClick={logout} className="w-full text-right px-4 py-2 text-sm text-red-600 hover:bg-red-50">تسجيل خروج</button>
                 </div>
@@ -150,6 +177,9 @@ export function Header() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex items-center gap-8 h-12">
             <Link to="/" className="text-brand-dark font-bold hover:text-brand-primary transition-colors border-b-2 border-brand-primary h-full flex items-center">الصفحة الرئيسية</Link>
+            {dbUser?.role === 'shop_owner' && (
+              <Link to="/shop" className="text-brand-dark font-bold hover:text-brand-primary transition-colors h-full flex items-center">لوحة التحكم</Link>
+            )}
             <Link to="/" className="text-brand-dark font-medium hover:text-brand-primary transition-colors h-full flex items-center">العلامات التجارية</Link>
             <Link to="/" className="text-brand-dark font-medium hover:text-brand-primary transition-colors h-full flex items-center">العروض</Link>
             <Link to="/" className="text-brand-dark font-medium hover:text-brand-primary transition-colors h-full flex items-center">المدونة</Link>

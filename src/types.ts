@@ -85,3 +85,21 @@ export interface Review {
   comment: string;
   createdAt: number;
 }
+
+export interface OrderItem {
+  partId: string;
+  partName: string;
+  price: number;
+  quantity: number;
+}
+
+export interface Order {
+  id: string;
+  customerUid: string;
+  items: OrderItem[];
+  totalPrice: number;
+  shippingAddress: string;
+  phoneNumber: string;
+  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+  createdAt: string;
+}

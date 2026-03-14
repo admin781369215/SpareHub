@@ -1,14 +1,19 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './AuthContext';
+import { CartProvider } from './contexts/CartContext';
 import { ErrorBoundary } from './ErrorBoundary';
 import { Header } from './components/Header';
 import { CustomerDashboard } from './components/CustomerDashboard';
 import { ShopDashboard } from './components/ShopDashboard';
 import { ShopRegistration } from './components/ShopRegistration';
+import { CheckoutPage } from './components/CheckoutPage';
+import { OrderHistoryPage } from './components/OrderHistoryPage';
 import CustomerRequests from './components/CustomerRequests';
 import { BottomNav } from './components/BottomNav';
 import { Footer } from './components/Footer';
+import { CartDrawer } from './components/CartDrawer';
+import { useState, useEffect } from 'react';
 
 function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode, requiredRole?: string }) {
   const { user, dbUser, loading, signIn } = useAuth();
@@ -46,6 +51,13 @@ function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode,
 
 function AppContent() {
   const { user, dbUser, loading } = useAuth();
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenCart = () => setIsCartOpen(true);
+    window.addEventListener('open-cart', handleOpenCart as EventListener);
+    return () => window.removeEventListener('open-cart', handleOpenCart as EventListener);
+  }, []);
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -54,6 +66,7 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-brand-bg font-sans text-brand-dark pb-16 md:pb-0">
       <Header />
+      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
       <main>
         <Routes>
           <Route path="/" element={<CustomerDashboard />} />
@@ -81,6 +94,22 @@ function AppContent() {
               </ProtectedRoute>
             } 
           />
+          <Route 
+            path="/checkout" 
+            element={
+              <ProtectedRoute>
+                <CheckoutPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/my-orders" 
+            element={
+              <ProtectedRoute>
+                <OrderHistoryPage />
+              </ProtectedRoute>
+            } 
+          />
         </Routes>
       </main>
       <Footer />
@@ -93,9 +122,11 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <Router>
-          <AppContent />
-        </Router>
+        <CartProvider>
+          <Router>
+            <AppContent />
+          </Router>
+        </CartProvider>
       </AuthProvider>
     </ErrorBoundary>
   );

@@ -8,9 +8,10 @@ interface ShopProfileModalProps {
   shop: Shop;
   isOpen: boolean;
   onClose: () => void;
+  canReview?: boolean;
 }
 
-export function ShopProfileModal({ shop, isOpen, onClose }: ShopProfileModalProps) {
+export function ShopProfileModal({ shop, isOpen, onClose, canReview = true }: ShopProfileModalProps) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -91,6 +92,18 @@ export function ShopProfileModal({ shop, isOpen, onClose }: ShopProfileModalProp
 
         const reviewRef = doc(collection(db, 'reviews'));
         transaction.set(reviewRef, newReview);
+
+        // Add notification for the shop owner
+        const notificationRef = doc(collection(db, 'notifications'));
+        transaction.set(notificationRef, {
+          userId: shopData.ownerUid,
+          title: 'تقييم جديد!',
+          message: `قام ${newReview.userName} بتقييم متجرك بـ ${rating} نجوم.`,
+          read: false,
+          type: 'general',
+          relatedId: shop.id,
+          createdAt: Date.now()
+        });
       });
 
       setComment('');
@@ -149,7 +162,7 @@ export function ShopProfileModal({ shop, isOpen, onClose }: ShopProfileModalProp
               </div>
               <button
                 type="button"
-                className="bg-white rounded-md text-gray-400 hover:text-brand-secondary focus:outline-none"
+                className="bg-white rounded-lg text-gray-400 hover:text-brand-secondary focus:outline-none p-2 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
                 onClick={onClose}
               >
                 <span className="sr-only">إغلاق</span>
@@ -159,7 +172,7 @@ export function ShopProfileModal({ shop, isOpen, onClose }: ShopProfileModalProp
 
             <div className="border-t border-brand-border pt-5">
               {/* Review Form */}
-              {auth.currentUser && !hasReviewed && (
+              {canReview && auth.currentUser && !hasReviewed && (
                 <div className="bg-brand-bg rounded-xl p-4 mb-6 border border-gray-100">
                   <h4 className="text-lg font-bold text-brand-dark mb-3">أضف تقييمك</h4>
                   <form onSubmit={handleSubmitReview}>
@@ -171,7 +184,7 @@ export function ShopProfileModal({ shop, isOpen, onClose }: ShopProfileModalProp
                             key={star}
                             type="button"
                             onClick={() => setRating(star)}
-                            className={`p-1 focus:outline-none transition-transform hover:scale-110 ${
+                            className={`p-2 min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none transition-transform hover:scale-110 ${
                               star <= rating ? 'text-yellow-400' : 'text-gray-300'
                             }`}
                           >
@@ -195,7 +208,7 @@ export function ShopProfileModal({ shop, isOpen, onClose }: ShopProfileModalProp
                     <button
                       type="submit"
                       disabled={submitting || !comment.trim()}
-                      className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary disabled:opacity-50"
+                      className="w-full inline-flex justify-center items-center px-4 min-h-[44px] border border-transparent text-sm font-bold rounded-lg shadow-sm text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary disabled:opacity-50 transition-colors"
                     >
                       {submitting ? 'جاري الإرسال...' : 'إرسال التقييم'}
                     </button>

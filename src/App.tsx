@@ -10,9 +10,11 @@ import { ShopRegistration } from './components/ShopRegistration';
 import { CheckoutPage } from './components/CheckoutPage';
 import { OrderHistoryPage } from './components/OrderHistoryPage';
 import CustomerRequests from './components/CustomerRequests';
+import { SuperAdminDashboard } from './components/SuperAdminDashboard';
 import { BottomNav } from './components/BottomNav';
 import { Footer } from './components/Footer';
 import { CartDrawer } from './components/CartDrawer';
+import { InstallPWA } from './components/InstallPWA';
 import { useState, useEffect } from 'react';
 
 function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode, requiredRole?: string }) {
@@ -30,7 +32,7 @@ function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode,
           <p className="text-brand-secondary mb-8">يرجى تسجيل الدخول للوصول إلى المنصة.</p>
           <button
             onClick={signIn}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+            className="w-full flex justify-center items-center min-h-[44px] px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
           >
             تسجيل الدخول باستخدام جوجل
           </button>
@@ -64,9 +66,10 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-brand-bg font-sans text-brand-dark pb-16 md:pb-0">
+    <div className="min-h-screen bg-brand-bg font-sans text-brand-dark pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
       <Header />
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+      <InstallPWA />
       <main>
         <Routes>
           <Route path="/" element={<CustomerDashboard />} />
@@ -75,6 +78,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <CustomerRequests />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <SuperAdminDashboard />
               </ProtectedRoute>
             } 
           />

@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
-import { Order } from '../types';
-import { Package, Clock, CheckCircle, XCircle, Truck } from 'lucide-react';
+import { Order, Shop } from '../types';
+import { Package, Clock, CheckCircle, XCircle, Truck, Star } from 'lucide-react';
+import { ShopProfileModal } from './ShopProfileModal';
 
 export function OrderHistoryPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -44,6 +46,21 @@ export function OrderHistoryPage() {
     }
   };
 
+  const handleReviewShop = async (shopId: string) => {
+    if (!shopId) return;
+    try {
+      const shopDoc = await getDoc(doc(db, 'shops', shopId));
+      if (shopDoc.exists()) {
+        setSelectedShop({ id: shopDoc.id, ...shopDoc.data() } as Shop);
+      } else {
+        alert('المتجر غير موجود');
+      }
+    } catch (error) {
+      console.error('Error fetching shop:', error);
+      alert('حدث خطأ أثناء جلب بيانات المتجر');
+    }
+  };
+
   if (loading) return <div className="p-8 text-center">جاري تحميل الطلبات...</div>;
 
   return (
@@ -66,15 +83,33 @@ export function OrderHistoryPage() {
                 </div>
                 <div className="flex items-center gap-2 font-bold text-sm">
                   {getStatusIcon(order.status)}
-                  {order.status}
+                  {order.status === 'pending' && 'قيد المراجعة'}
+                  {order.status === 'confirmed' && 'مؤكد'}
+                  {order.status === 'shipped' && 'تم الشحن'}
+                  {order.status === 'delivered' && 'تم التوصيل'}
+                  {order.status === 'cancelled' && 'ملغي'}
                 </div>
               </div>
               
               <div className="border-t border-gray-100 pt-4">
                 {order.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between text-sm py-1">
-                    <span>{item.partName} x {item.quantity}</span>
-                    <span>${(item.price * item.quantity).toFixed(2)}</span>
+                  <div key={idx} className="flex flex-col sm:flex-row sm:justify-between sm:items-center text-sm py-2 border-b border-gray-50 last:border-0">
+                    <div className="mb-2 sm:mb-0">
+                      <span className="font-medium">{item.partName}</span>
+                      <span className="text-gray-500 mx-2">x {item.quantity}</span>
+                    </div>
+                    <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
+                      <span className="font-bold">${(item.price * item.quantity).toFixed(2)}</span>
+                      {order.status === 'delivered' && item.shopId && (
+                        <button
+                          onClick={() => handleReviewShop(item.shopId)}
+                          className="flex items-center justify-center gap-1 text-sm font-bold text-brand-primary hover:text-brand-primary-hover bg-brand-primary/10 px-4 min-h-[44px] rounded-lg transition-colors"
+                        >
+                          <Star className="w-4 h-4 fill-current" />
+                          تقييم المتجر
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -86,6 +121,14 @@ export function OrderHistoryPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {selectedShop && (
+        <ShopProfileModal
+          shop={selectedShop}
+          isOpen={!!selectedShop}
+          onClose={() => setSelectedShop(null)}
+        />
       )}
     </div>
   );

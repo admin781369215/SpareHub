@@ -65,14 +65,19 @@ service cloud.firestore {
     }
 
     function isValidShop(data) {
-      return hasOnlyAllowedFields(['ownerUid', 'name', 'phone', 'city', 'location', 'rating', 'reviewCount', 'createdAt']) &&
+      return hasOnlyAllowedFields(['ownerUid', 'name', 'phone', 'city', 'location', 'latitude', 'longitude', 'rating', 'reviewCount', 'status', 'createdAt', 'subscriptionStatus', 'subscriptionEndDate']) &&
              data.ownerUid is string && data.ownerUid.size() > 0 && data.ownerUid.size() < 100 &&
              data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
              data.phone is string && data.phone.size() > 0 && data.phone.size() < 50 &&
              data.city is string && data.city.size() > 0 && data.city.size() < 100 &&
              (!('location' in data) || (data.location is string && data.location.size() < 200)) &&
+             (!('latitude' in data) || data.latitude == null || data.latitude is number) &&
+             (!('longitude' in data) || data.longitude == null || data.longitude is number) &&
              (!('rating' in data) || (data.rating is number && data.rating >= 0 && data.rating <= 5)) &&
              (!('reviewCount' in data) || (data.reviewCount is number && data.reviewCount >= 0)) &&
+             (!('status' in data) || (data.status in ['pending', 'approved', 'rejected'])) &&
+             (!('subscriptionStatus' in data) || (data.subscriptionStatus in ['active', 'trial', 'expired'])) &&
+             (!('subscriptionEndDate' in data) || data.subscriptionEndDate is string) &&
              data.createdAt is string;
     }
 
@@ -103,9 +108,10 @@ service cloud.firestore {
     }
 
     function isValidRequestResponse(data) {
-      return hasOnlyAllowedFields(['requestId', 'shopId', 'price', 'quantity', 'status', 'createdAt']) &&
+      return hasOnlyAllowedFields(['requestId', 'shopId', 'customerUid', 'price', 'quantity', 'status', 'createdAt']) &&
              data.requestId is string && data.requestId.size() > 0 && data.requestId.size() < 100 &&
              data.shopId is string && data.shopId.size() > 0 && data.shopId.size() < 100 &&
+             data.customerUid is string && data.customerUid.size() > 0 && data.customerUid.size() < 100 &&
              data.price is number && data.price >= 0 &&
              data.quantity is number && data.quantity >= 0 &&
              data.status in ['pending', 'accepted', 'rejected'] &&
@@ -158,7 +164,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isValidShop(request.resource.data) && 
                     (request.resource.data.ownerUid == request.auth.uid || isAdmin());
       allow update: if isAuthenticated() && isValidShop(request.resource.data) && 
-                    ((resource.data.ownerUid == request.auth.uid && request.resource.data.ownerUid == resource.data.ownerUid) || 
+                    ((resource.data.ownerUid == request.auth.uid && request.resource.data.ownerUid == resource.data.ownerUid && !('status' in request.resource.data.diff(resource.data).affectedKeys()) && !('subscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) && !('subscriptionEndDate' in request.resource.data.diff(resource.data).affectedKeys())) || 
                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'reviewCount'])) ||
                      isAdmin());
       allow delete: if isAuthenticated() && (resource.data.ownerUid == request.auth.uid || isAdmin());
@@ -176,7 +182,7 @@ service cloud.firestore {
     }
 
     match /partRequests/{requestId} {
-      allow read: if isAuthenticated(); // Any authenticated user can read requests (shops need to see them)
+      allow read: if isAuthenticated() && (resource.data.customerUid == request.auth.uid || isShopOwner() || isAdmin());
       allow create: if isAuthenticated() && isValidPartRequest(request.resource.data) && 
                     (request.resource.data.customerUid == request.auth.uid);
       allow update: if isAuthenticated() && isValidPartRequest(request.resource.data) && 
@@ -185,15 +191,21 @@ service cloud.firestore {
     }
 
     match /requestResponses/{responseId} {
-      allow read: if isAuthenticated(); // Customers and shops need to see responses
+      allow read: if isAuthenticated() && (
+        resource.data.customerUid == request.auth.uid || 
+        get(/databases/$(database)/documents/shops/$(resource.data.shopId)).data.ownerUid == request.auth.uid || 
+        isAdmin()
+      );
       allow create: if isAuthenticated() && isValidRequestResponse(request.resource.data) && 
                     (get(/databases/$(database)/documents/shops/$(request.resource.data.shopId)).data.ownerUid == request.auth.uid);
       allow update: if isAuthenticated() && isValidRequestResponse(request.resource.data) && 
                     ((get(/databases/$(database)/documents/shops/$(resource.data.shopId)).data.ownerUid == request.auth.uid && 
-                      request.resource.data.shopId == resource.data.shopId) || 
-                     (get(/databases/$(database)/documents/partRequests/$(resource.data.requestId)).data.customerUid == request.auth.uid &&
+                      request.resource.data.shopId == resource.data.shopId &&
+                      request.resource.data.customerUid == resource.data.customerUid) || 
+                     (resource.data.customerUid == request.auth.uid &&
                       request.resource.data.shopId == resource.data.shopId &&
                       request.resource.data.requestId == resource.data.requestId &&
+                      request.resource.data.customerUid == resource.data.customerUid &&
                       request.resource.data.price == resource.data.price &&
                       request.resource.data.quantity == resource.data.quantity) || 
                      isAdmin());
@@ -223,6 +235,11 @@ service cloud.firestore {
                     request.resource.data.userId == request.auth.uid;
       allow update: if false; // Reviews cannot be updated
       allow delete: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }

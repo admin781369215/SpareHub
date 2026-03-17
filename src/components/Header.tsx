@@ -1,16 +1,75 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { useCart } from '../contexts/CartContext';
-import { LogOut, User as UserIcon, Settings, Wrench, Store, ClipboardList, Menu, Search, Heart, ShoppingCart, ShieldCheck, Phone, Mail, Bell } from 'lucide-react';
+import { LogOut, User as UserIcon, Settings, Wrench, Store, ClipboardList, Menu, Search, Heart, ShoppingCart, ShieldCheck, Phone, Mail, Bell, CheckCircle } from 'lucide-react';
+import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { AppNotification } from '../types';
+import { useScrollDirection } from '../hooks/useScrollDirection';
 
 export function Header() {
   const { user, dbUser, signIn, logout } = useAuth();
   const { items } = useCart();
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [searchQuery, setSearchQuery] = React.useState(searchParams.get('q') || '');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+  const { scrollDirection, isAtTop } = useScrollDirection();
+  
+  // Notifications state
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setNotifications([]);
+      return;
+    }
+
+    const notificationsRef = collection(db, 'notifications');
+    const qNotifications = query(notificationsRef, where('userId', '==', user.uid));
+    
+    const unsubscribe = onSnapshot(qNotifications, (snapshot) => {
+      const notifsData: AppNotification[] = [];
+      snapshot.forEach((doc) => {
+        notifsData.push({ id: doc.id, ...doc.data() } as AppNotification);
+      });
+      notifsData.sort((a, b) => b.createdAt - a.createdAt);
+      setNotifications(notifsData);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const markAsRead = async (notificationId: string) => {
+    try {
+      await updateDoc(doc(db, 'notifications', notificationId), { read: true });
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    const unreadNotifs = notifications.filter(n => !n.read);
+    for (const notif of unreadNotifs) {
+      await markAsRead(notif.id);
+    }
+  };
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,8 +80,10 @@ export function Header() {
     }
   };
 
+  const isHidden = scrollDirection === 'down' && !isAtTop && !isMenuOpen && !showNotifications;
+
   return (
-    <header className="bg-brand-dark border-b border-brand-dark sticky top-0 z-50">
+    <header className={`bg-brand-dark border-b border-brand-dark sticky top-0 z-50 transition-transform duration-300 ${isHidden ? '-translate-y-full' : 'translate-y-0'}`}>
       {/* Top Bar */}
       <div className="bg-brand-dark text-brand-secondary text-xs py-1.5 border-b border-white/10 hidden md:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
@@ -86,26 +147,77 @@ export function Header() {
 
           {/* Icons */}
           <div className="hidden md:flex items-center gap-6">
-            {/* Cart */}
-            <button onClick={() => window.dispatchEvent(new CustomEvent('open-cart'))} className="relative text-white hover:text-brand-primary transition-colors">
-              <ShoppingCart className="h-6 w-6" />
-              {items.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-brand-primary text-brand-dark text-[10px] font-bold h-5 w-5 rounded-full flex items-center justify-center">
-                  {items.length}
-                </span>
-              )}
-            </button>
-            
             {/* Notifications */}
-            <div className="relative">
-              <button
-                onClick={() => window.dispatchEvent(new CustomEvent('toggle-notifications'))}
-                className="relative text-white hover:text-brand-primary transition-colors"
-              >
-                <Bell className="h-6 w-6" />
-                {/* Note: Unread count logic needs to be handled or passed here */}
-              </button>
-            </div>
+            {user && (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative text-white hover:text-brand-primary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                >
+                  <Bell className="h-6 w-6" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notifications Dropdown */}
+                {showNotifications && (
+                  <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-lg shadow-xl py-2 z-50 border border-gray-100">
+                    <div className="px-4 py-2 border-b border-gray-100 flex justify-between items-center">
+                      <h3 className="font-bold text-gray-900">الإشعارات</h3>
+                      {unreadCount > 0 && (
+                        <button 
+                          onClick={markAllAsRead}
+                          className="text-xs text-brand-primary hover:underline"
+                        >
+                          تحديد الكل كمقروء
+                        </button>
+                      )}
+                    </div>
+                    <div className="max-h-96 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                          لا توجد إشعارات
+                        </div>
+                      ) : (
+                        notifications.map((notif) => (
+                          <div 
+                            key={notif.id} 
+                            className={`px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${!notif.read ? 'bg-blue-50/50' : ''}`}
+                            onClick={() => {
+                              if (!notif.read) markAsRead(notif.id);
+                              setShowNotifications(false);
+                              if (notif.type === 'request_response') {
+                                navigate(dbUser?.role === 'shop_owner' ? '/shop' : '/my-requests');
+                              }
+                            }}
+                          >
+                            <div className="flex justify-between items-start mb-1">
+                              <h4 className={`text-sm ${!notif.read ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
+                                {notif.title}
+                              </h4>
+                              {!notif.read && <span className="w-2 h-2 bg-brand-primary rounded-full mt-1.5 shrink-0"></span>}
+                            </div>
+                            <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">{notif.message}</p>
+                            <span className="text-[10px] text-gray-400 mt-2 block">
+                              {new Date(notif.createdAt).toLocaleDateString('ar-SA', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* User */}
             {user ? (
@@ -119,7 +231,9 @@ export function Header() {
                 </div>
                 {/* Dropdown */}
                 <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 hidden group-hover:block z-50">
-                  {dbUser?.role === 'shop_owner' ? (
+                  {dbUser?.role === 'admin' ? (
+                    <Link to="/admin" className="block px-4 py-2 text-sm text-brand-dark hover:bg-brand-bg">لوحة الإدارة العليا</Link>
+                  ) : dbUser?.role === 'shop_owner' ? (
                     <Link to="/shop" className="block px-4 py-2 text-sm text-brand-dark hover:bg-brand-bg">لوحة التحكم</Link>
                   ) : (
                     <>
@@ -132,7 +246,7 @@ export function Header() {
                 </div>
               </div>
             ) : (
-              <button onClick={signIn} className="flex items-center gap-2 text-white hover:text-brand-primary transition-colors">
+              <button onClick={signIn} className="flex items-center gap-2 text-white hover:text-brand-primary transition-colors min-h-[44px] min-w-[44px]">
                 <UserIcon className="h-6 w-6" />
                 <div className="hidden lg:block text-right">
                   <div className="text-xs text-brand-secondary">تسجيل الدخول</div>
@@ -142,7 +256,7 @@ export function Header() {
             )}
 
             {/* Favorites */}
-            <Link to="/?tab=wishlist" className="flex items-center gap-2 text-white hover:text-brand-primary transition-colors relative">
+            <Link to="/?tab=wishlist" className="flex items-center gap-2 text-white hover:text-brand-primary transition-colors relative min-h-[44px] min-w-[44px]">
               <Heart className="h-6 w-6" />
               <div className="hidden lg:block text-right">
                 <div className="text-xs text-brand-secondary">المفضلة</div>
@@ -151,7 +265,7 @@ export function Header() {
             </Link>
 
             {/* Cart / Requests */}
-            <Link to="/my-requests" className="flex items-center gap-2 text-white hover:text-brand-primary transition-colors relative">
+            <Link to="/my-requests" className="flex items-center gap-2 text-white hover:text-brand-primary transition-colors relative min-h-[44px] min-w-[44px]">
               <ShoppingCart className="h-6 w-6" />
               <div className="hidden lg:block text-right">
                 <div className="text-xs text-brand-secondary">الطلبات</div>
@@ -161,16 +275,110 @@ export function Header() {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center">
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 rounded-lg text-white hover:bg-brand-secondary/20"
-            >
-              <Menu className="h-6 w-6" />
-            </button>
+          {(dbUser?.role === 'shop_owner' || dbUser?.role === 'admin') && (
+            <div className="md:hidden flex items-center gap-4">
+              {user && (
+                <button
+                  onClick={() => {
+                    setShowNotifications(!showNotifications);
+                    setIsMenuOpen(false);
+                  }}
+                  className="relative text-white hover:text-brand-primary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                >
+                  <Bell className="h-6 w-6" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setIsMenuOpen(!isMenuOpen);
+                  setShowNotifications(false);
+                }}
+                className="p-2 rounded-lg text-white hover:bg-brand-secondary/20 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              >
+                <Menu className="h-6 w-6" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Mobile Search Bar */}
+        {(!user || dbUser?.role === 'customer') && (
+          <div className="md:hidden pb-4">
+            <form onSubmit={handleSearch} className="w-full relative flex shadow-sm">
+              <input 
+                type="text" 
+                placeholder="ابحث برقم القطعة أو اسمها..." 
+                className="w-full pl-12 pr-4 py-2.5 rounded-r-lg border-none focus:ring-2 focus:ring-brand-primary text-brand-dark bg-white"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <button type="submit" className="bg-brand-primary text-brand-dark px-5 rounded-l-lg font-bold hover:bg-brand-primary-hover transition-colors flex items-center justify-center">
+                <Search className="w-5 h-5" />
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
+
+      {/* Mobile Notifications Dropdown */}
+      {showNotifications && (
+        <div className="md:hidden absolute top-full left-0 right-0 bg-white shadow-xl z-50 border-b border-gray-100 max-h-[80vh] overflow-y-auto">
+          <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50 sticky top-0">
+            <h3 className="font-bold text-gray-900">الإشعارات</h3>
+            {unreadCount > 0 && (
+              <button 
+                onClick={markAllAsRead}
+                className="text-xs text-brand-primary hover:underline font-medium"
+              >
+                تحديد الكل كمقروء
+              </button>
+            )}
+          </div>
+          <div>
+            {notifications.length === 0 ? (
+              <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                لا توجد إشعارات
+              </div>
+            ) : (
+              notifications.map((notif) => (
+                <div 
+                  key={notif.id} 
+                  className={`px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${!notif.read ? 'bg-blue-50/50' : ''}`}
+                  onClick={() => {
+                    if (!notif.read) markAsRead(notif.id);
+                    setShowNotifications(false);
+                    if (notif.type === 'request_response') {
+                      navigate(dbUser?.role === 'shop_owner' ? '/shop' : '/my-requests');
+                    }
+                  }}
+                >
+                  <div className="flex justify-between items-start mb-1">
+                    <h4 className={`text-sm ${!notif.read ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
+                      {notif.title}
+                    </h4>
+                    {!notif.read && <span className="w-2 h-2 bg-brand-primary rounded-full mt-1.5 shrink-0"></span>}
+                  </div>
+                  <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">{notif.message}</p>
+                  <span className="text-[10px] text-gray-400 mt-2 block">
+                    {new Date(notif.createdAt).toLocaleDateString('ar-SA', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
-      </div>
+      )}
 
       {/* Navigation Bar */}
       <div className="bg-white border-b border-brand-border hidden md:block">
@@ -217,24 +425,17 @@ export function Header() {
                 </div>
               </div>
               
-              {dbUser?.role === 'customer' && (
-                <Link to="/my-requests" className="flex items-center gap-3 p-3 rounded-lg hover:bg-brand-secondary/20 text-white">
-                  <ClipboardList className="h-5 w-5 text-brand-primary" />
-                  <span>طلباتي</span>
+              {dbUser?.role === 'admin' ? (
+                <Link to="/admin" className="flex items-center gap-3 p-3 rounded-lg hover:bg-brand-secondary/20 text-white">
+                  <Settings className="h-5 w-5 text-brand-primary" />
+                  <span>لوحة الإدارة العليا</span>
                 </Link>
-              )}
-
-              {dbUser?.role === 'shop_owner' ? (
+              ) : dbUser?.role === 'shop_owner' ? (
                 <Link to="/shop" className="flex items-center gap-3 p-3 rounded-lg hover:bg-brand-secondary/20 text-white">
                   <Settings className="h-5 w-5 text-brand-primary" />
                   <span>لوحة التحكم</span>
                 </Link>
-              ) : (
-                <Link to="/register-shop" className="flex items-center gap-3 p-3 rounded-lg hover:bg-brand-secondary/20 text-white">
-                  <Store className="h-5 w-5 text-brand-primary" />
-                  <span>سجل متجرك</span>
-                </Link>
-              )}
+              ) : null}
 
               <button onClick={logout} className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-red-500/10 text-red-500">
                 <LogOut className="h-5 w-5" />

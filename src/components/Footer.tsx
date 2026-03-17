@@ -18,16 +18,16 @@ export function Footer() {
               المنصة الأولى في المملكة لبيع وشراء قطع غيار السيارات. نوفر لك أفضل القطع بأسعار تنافسية مع ضمان الجودة وسرعة التوصيل.
             </p>
             <div className="flex gap-4">
-              <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-brand-primary hover:text-brand-dark transition-colors">
+              <a href="#" className="w-11 h-11 rounded-full bg-white/5 flex items-center justify-center hover:bg-brand-primary hover:text-brand-dark transition-colors">
                 <Twitter className="w-5 h-5" />
               </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-brand-primary hover:text-brand-dark transition-colors">
+              <a href="#" className="w-11 h-11 rounded-full bg-white/5 flex items-center justify-center hover:bg-brand-primary hover:text-brand-dark transition-colors">
                 <Facebook className="w-5 h-5" />
               </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-brand-primary hover:text-brand-dark transition-colors">
+              <a href="#" className="w-11 h-11 rounded-full bg-white/5 flex items-center justify-center hover:bg-brand-primary hover:text-brand-dark transition-colors">
                 <Instagram className="w-5 h-5" />
               </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-brand-primary hover:text-brand-dark transition-colors">
+              <a href="#" className="w-11 h-11 rounded-full bg-white/5 flex items-center justify-center hover:bg-brand-primary hover:text-brand-dark transition-colors">
                 <Youtube className="w-5 h-5" />
               </a>
             </div>
@@ -36,12 +36,12 @@ export function Footer() {
           {/* Quick Links */}
           <div>
             <h3 className="text-white font-bold text-lg mb-6">روابط سريعة</h3>
-            <ul className="space-y-3">
-              <li><Link to="/" className="hover:text-brand-primary transition-colors text-sm">الرئيسية</Link></li>
-              <li><Link to="/about" className="hover:text-brand-primary transition-colors text-sm">من نحن</Link></li>
-              <li><Link to="/terms" className="hover:text-brand-primary transition-colors text-sm">الشروط والأحكام</Link></li>
-              <li><Link to="/privacy" className="hover:text-brand-primary transition-colors text-sm">سياسة الخصوصية</Link></li>
-              <li><Link to="/contact" className="hover:text-brand-primary transition-colors text-sm">اتصل بنا</Link></li>
+            <ul className="space-y-2">
+              <li><Link to="/" className="hover:text-brand-primary transition-colors text-sm inline-flex items-center min-h-[44px]">الرئيسية</Link></li>
+              <li><Link to="/about" className="hover:text-brand-primary transition-colors text-sm inline-flex items-center min-h-[44px]">من نحن</Link></li>
+              <li><Link to="/terms" className="hover:text-brand-primary transition-colors text-sm inline-flex items-center min-h-[44px]">الشروط والأحكام</Link></li>
+              <li><Link to="/privacy" className="hover:text-brand-primary transition-colors text-sm inline-flex items-center min-h-[44px]">سياسة الخصوصية</Link></li>
+              <li><Link to="/contact" className="hover:text-brand-primary transition-colors text-sm inline-flex items-center min-h-[44px]">اتصل بنا</Link></li>
             </ul>
           </div>
 

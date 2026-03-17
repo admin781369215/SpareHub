@@ -30,14 +30,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const userDoc = await getDoc(userDocRef);
           
           if (userDoc.exists()) {
-            setDbUser(userDoc.data() as User);
+            const data = userDoc.data() as User;
+            if (firebaseUser.email === '781369216a@gmail.com' && data.role !== 'admin') {
+              data.role = 'admin';
+              await setDoc(userDocRef, data, { merge: true });
+            }
+            setDbUser(data);
           } else {
             // Create new user document
             const newUser: User = {
               uid: firebaseUser.uid,
               email: firebaseUser.email || '',
               displayName: firebaseUser.displayName || '',
-              role: 'customer', // Default role
+              role: firebaseUser.email === '781369216a@gmail.com' ? 'admin' : 'customer',
               createdAt: new Date().toISOString()
             };
             await setDoc(userDocRef, newUser);

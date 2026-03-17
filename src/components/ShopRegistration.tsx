@@ -28,6 +28,7 @@ export function ShopRegistration() {
         ...formData,
         ownerUid: user.uid,
         rating: 0,
+        status: 'pending',
         createdAt: new Date().toISOString()
       });
 
@@ -140,7 +141,7 @@ export function ShopRegistration() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary disabled:opacity-50"
+                className="w-full flex justify-center items-center px-4 min-h-[44px] border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary disabled:opacity-50 transition-colors"
               >
                 {loading ? 'جاري التسجيل...' : 'تسجيل المحل'}
               </button>

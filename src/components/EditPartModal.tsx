@@ -64,7 +64,7 @@ export function EditPartModal({ part, onClose }: EditPartModalProps) {
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium text-brand-dark">تعديل القطعة: {part.partName}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-500 min-h-[44px] min-w-[44px] flex items-center justify-center">
             <X className="h-6 w-6" />
           </button>
         </div>
@@ -131,9 +131,15 @@ export function EditPartModal({ part, onClose }: EditPartModalProps) {
             <label className="block text-sm font-medium text-gray-700 mb-2">الصور</label>
             <div className="grid grid-cols-3 gap-2 mb-2">
               {existingImages.map((url, index) => (
-                <div key={index} className="relative">
-                  <img src={url} alt="Part" className="h-20 w-full object-cover rounded" />
-                  <button type="button" onClick={() => removeExistingImage(url)} className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"><X className="h-3 w-3" /></button>
+                <div key={index} className="relative rounded overflow-hidden">
+                  <img src={url} alt="Part" className="h-24 w-full object-cover" />
+                  <button 
+                    type="button" 
+                    onClick={() => removeExistingImage(url)} 
+                    className="absolute top-0 right-0 bg-red-500/90 text-white rounded-bl-lg min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-red-600 transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
                 </div>
               ))}
             </div>
@@ -144,14 +150,14 @@ export function EditPartModal({ part, onClose }: EditPartModalProps) {
             <button
               type="button"
               onClick={onClose}
-              className="bg-white py-2 px-4 border border-brand-border rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-brand-bg"
+              className="bg-white min-h-[44px] px-6 border border-brand-border rounded-lg shadow-sm text-sm font-bold text-gray-700 hover:bg-brand-bg transition-colors"
             >
               إلغاء
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover disabled:opacity-50"
+              className="inline-flex justify-center items-center min-h-[44px] px-6 border border-transparent shadow-sm text-sm font-bold rounded-lg text-white bg-brand-primary hover:bg-brand-primary-hover disabled:opacity-50 transition-colors"
             >
               {saving ? 'جاري الحفظ...' : 'حفظ التعديلات'}
             </button>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { collection, query, where, onSnapshot, getDocs, addDoc, deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Part, Shop, PartRequest, RequestResponse, SavedPart, AppNotification } from '../types';
+import { Part, Shop, PartRequest, RequestResponse, SavedPart } from '../types';
 import { Search, MapPin, Phone, DollarSign, Package, Plus, X, Filter, Heart, Bell, Camera, Star, Car } from 'lucide-react';
 import { handleFirestoreError, OperationType } from '../utils/firestore-errors';
 import { useAuth } from '../AuthContext';
@@ -65,10 +65,6 @@ export function CustomerDashboard() {
   const [savedParts, setSavedParts] = useState<SavedPart[]>([]);
   const [wishlistParts, setWishlistParts] = useState<(Part & { shop?: Shop })[]>([]);
 
-  // Notifications State
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [showNotifications, setShowNotifications] = useState(false);
-
   useEffect(() => {
     // Fetch all shops to map shopId to shop details
     const fetchShops = async () => {
@@ -85,10 +81,13 @@ export function CustomerDashboard() {
         const initialParts: (Part & { shop?: Shop })[] = [];
         partsSnapshot.forEach((doc) => {
           const partData = { id: doc.id, ...doc.data() } as Part;
-          initialParts.push({
-            ...partData,
-            shop: shopsData[partData.shopId]
-          });
+          const shop = shopsData[partData.shopId];
+          if (shop && (shop.status === 'approved' || !shop.status) && (shop.subscriptionStatus === 'active' || shop.subscriptionStatus === 'trial')) {
+            initialParts.push({
+              ...partData,
+              shop
+            });
+          }
         });
         setParts(initialParts);
       } catch (error) {
@@ -97,47 +96,6 @@ export function CustomerDashboard() {
     };
     fetchShops();
   }, []);
-
-  useEffect(() => {
-    if (!user) {
-      setNotifications([]);
-      return;
-    }
-
-    const notificationsRef = collection(db, 'notifications');
-    const qNotifications = query(notificationsRef, where('userId', '==', user.uid));
-    
-    const unsubscribeNotifications = onSnapshot(qNotifications, (snapshot) => {
-      const notifsData: AppNotification[] = [];
-      snapshot.forEach((doc) => {
-        notifsData.push({ id: doc.id, ...doc.data() } as AppNotification);
-      });
-      notifsData.sort((a, b) => b.createdAt - a.createdAt);
-      setNotifications(notifsData);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'notifications');
-    });
-
-    return () => unsubscribeNotifications();
-  }, [user]);
-
-  const markNotificationAsRead = async (notificationId: string) => {
-    try {
-      const notifRef = doc(db, 'notifications', notificationId);
-      await updateDoc(notifRef, { read: true });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `notifications/${notificationId}`);
-    }
-  };
-
-  const markAllNotificationsAsRead = async () => {
-    const unreadNotifs = notifications.filter(n => !n.read);
-    for (const notif of unreadNotifs) {
-      await markNotificationAsRead(notif.id);
-    }
-  };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
 
   useEffect(() => {
     if (!user) {
@@ -161,11 +119,10 @@ export function CustomerDashboard() {
       // Fetch responses for these requests
       if (requestsData.length > 0) {
         const requestIds = requestsData.map(r => r.id);
-        // Firestore 'in' query supports up to 10 items. For a real app, we might need a different approach if > 10
-        // For now, we'll fetch all responses and filter, or batch if needed.
-        // Since we want to keep it simple, let's just fetch all responses where we can, or just fetch all and filter locally for now to avoid complex index/batching issues in this prototype.
         const responsesRef = collection(db, 'requestResponses');
-        onSnapshot(responsesRef, (respSnapshot) => {
+        const qResponses = query(responsesRef, where('customerUid', '==', user.uid));
+        
+        onSnapshot(qResponses, (respSnapshot) => {
           const respData: RequestResponse[] = [];
           respSnapshot.forEach((doc) => {
             const data = { id: doc.id, ...doc.data() } as RequestResponse;
@@ -213,6 +170,10 @@ export function CustomerDashboard() {
         const parts = partDocs
           .filter(d => d.exists())
           .map(d => ({ id: d.id, ...d.data() } as Part))
+          .filter(part => {
+            const shop = shops[part.shopId];
+            return shop && (shop.status === 'approved' || !shop.status) && (shop.subscriptionStatus === 'active' || shop.subscriptionStatus === 'trial');
+          })
           .map(part => ({ ...part, shop: shops[part.shopId] }));
         setWishlistParts(parts);
       } catch (error) {
@@ -256,10 +217,13 @@ export function CustomerDashboard() {
         const allParts: (Part & { shop?: Shop })[] = [];
         partsSnapshot.forEach((doc) => {
           const partData = { id: doc.id, ...doc.data() } as Part;
-          allParts.push({
-            ...partData,
-            shop: shops[partData.shopId]
-          });
+          const shop = shops[partData.shopId];
+          if (shop && (shop.status === 'approved' || !shop.status) && (shop.subscriptionStatus === 'active' || shop.subscriptionStatus === 'trial')) {
+            allParts.push({
+              ...partData,
+              shop
+            });
+          }
         });
         setParts(allParts);
         setSimilarParts([]);
@@ -299,10 +263,15 @@ export function CustomerDashboard() {
         });
       }
 
-      let partsWithShops = Array.from(results.values()).map(part => ({
-        ...part,
-        shop: shops[part.shopId]
-      }));
+      let partsWithShops = Array.from(results.values())
+        .filter(part => {
+          const shop = shops[part.shopId];
+          return shop && (shop.status === 'approved' || !shop.status) && (shop.subscriptionStatus === 'active' || shop.subscriptionStatus === 'trial');
+        })
+        .map(part => ({
+          ...part,
+          shop: shops[part.shopId]
+        }));
 
       // Apply advanced filters
       if (filterCarMake) {
@@ -355,10 +324,15 @@ export function CustomerDashboard() {
           });
         }
         
-        let similarPartsWithShops = Array.from(similarResults.values()).map(part => ({
-          ...part,
-          shop: shops[part.shopId]
-        }));
+        let similarPartsWithShops = Array.from(similarResults.values())
+          .filter(part => {
+            const shop = shops[part.shopId];
+            return shop && (shop.status === 'approved' || !shop.status) && (shop.subscriptionStatus === 'active' || shop.subscriptionStatus === 'trial');
+          })
+          .map(part => ({
+            ...part,
+            shop: shops[part.shopId]
+          }));
 
         // Apply advanced filters to similar parts too
         if (filterCarMake) {
@@ -475,7 +449,7 @@ export function CustomerDashboard() {
                 <h3 className="font-bold text-lg mb-1">عروض اليوم</h3>
                 <p className="text-xs opacity-90">خصومات تصل إلى 50% على قطع الغيار</p>
               </div>
-              <button className="bg-white text-brand-primary text-xs font-bold px-4 py-2 rounded-full shadow-sm">
+              <button className="bg-white text-brand-primary text-xs font-bold px-4 min-h-[44px] rounded-full shadow-sm">
                 تسوق الآن
               </button>
             </div>
@@ -494,7 +468,7 @@ export function CustomerDashboard() {
                       <li key={cat}>
                         <button 
                           onClick={() => { setFilterCarMake(''); setSearchTerm(cat); handleSearch(new Event('submit') as any); }}
-                          className="w-full text-right px-3 py-2 rounded-lg hover:bg-brand-bg hover:text-brand-primary transition-colors text-sm font-medium"
+                          className="w-full text-right px-3 py-2 rounded-lg hover:bg-brand-bg hover:text-brand-primary transition-colors text-sm font-medium min-h-[44px]"
                         >
                           {cat}
                         </button>
@@ -566,7 +540,7 @@ export function CustomerDashboard() {
                     <h2 className="text-2xl lg:text-3xl font-bold mb-2">خصم 20% على الفلاتر</h2>
                     <p className="text-white/90">استخدم الكود FILTER20 عند الدفع</p>
                   </div>
-                  <button className="bg-white text-brand-dark px-6 py-2 rounded-lg font-bold hover:bg-gray-100 transition-colors whitespace-nowrap">استفد من العرض</button>
+                  <button className="bg-white text-brand-dark px-6 min-h-[44px] rounded-lg font-bold hover:bg-gray-100 transition-colors whitespace-nowrap">استفد من العرض</button>
                 </div>
               </div>
             </div>
@@ -662,7 +636,7 @@ export function CustomerDashboard() {
                   </div>
                   <button
                     onClick={handleSearch}
-                    className="w-full bg-gray-100 text-gray-800 border border-brand-border px-4 py-2 rounded-md font-medium hover:bg-gray-200 transition-colors mt-2 text-sm"
+                    className="w-full bg-gray-100 text-gray-800 border border-brand-border px-4 min-h-[44px] rounded-md font-medium hover:bg-gray-200 transition-colors mt-2 text-sm"
                   >
                     تطبيق الفلاتر
                   </button>
@@ -681,9 +655,9 @@ export function CustomerDashboard() {
                     <button
                       type="button"
                       onClick={() => setShowFilters(!showFilters)}
-                      className="md:hidden flex items-center gap-2 text-sm font-medium text-brand-primary bg-brand-primary/10 px-3 py-1.5 rounded-full"
+                      className="md:hidden flex items-center gap-2 text-sm font-medium text-brand-primary bg-brand-primary/10 px-4 min-h-[44px] rounded-full"
                     >
-                      <Filter className="h-4 w-4" />
+                      <Filter className="h-5 w-5" />
                       تصفية
                     </button>
                   </div>
@@ -881,14 +855,14 @@ export function CustomerDashboard() {
                                       <>
                                         <button 
                                           onClick={() => setSelectedShopProfile(shop)}
-                                          className="flex-1 sm:flex-none flex justify-center items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors border border-brand-border"
+                                          className="flex-1 sm:flex-none flex justify-center items-center gap-1.5 px-4 min-h-[44px] rounded-lg text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors border border-brand-border"
                                         >
                                           <Star className="w-4 h-4" />
                                           <span>تقييم المحل</span>
                                         </button>
                                         <a 
                                           href={`tel:${shop.phone}`} 
-                                          className="flex-1 sm:flex-none flex justify-center items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-bold text-white bg-brand-primary hover:bg-brand-primary-hover transition-colors shadow-sm"
+                                          className="flex-1 sm:flex-none flex justify-center items-center gap-1.5 px-4 min-h-[44px] rounded-lg text-sm font-bold text-white bg-brand-primary hover:bg-brand-primary-hover transition-colors shadow-sm"
                                         >
                                           <Phone className="w-4 h-4" />
                                           <span>اتصال</span>
@@ -955,7 +929,7 @@ export function CustomerDashboard() {
             <div className="inline-block align-bottom bg-transparent rounded-lg text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl w-full relative">
               <button
                 type="button"
-                className="absolute top-4 right-4 text-white hover:text-gray-300 z-10 bg-black bg-opacity-50 rounded-full p-2"
+                className="absolute top-4 right-4 text-white hover:text-gray-300 z-10 bg-black bg-opacity-50 rounded-full p-2 min-h-[44px] min-w-[44px] flex items-center justify-center"
                 onClick={() => setSelectedImagePart(null)}
               >
                 <X className="h-6 w-6" />
@@ -1077,18 +1051,18 @@ export function CustomerDashboard() {
                             </select>
                           </div>
                         </div>
-                        <div className="mt-5 sm:mt-6 sm:flex sm:flex-row-reverse">
+                        <div className="mt-5 sm:mt-6 sm:flex sm:flex-row-reverse gap-3">
                           <button
                             type="submit"
                             disabled={requesting}
-                            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-brand-primary text-base font-medium text-white hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary sm:ms-3 sm:w-auto sm:text-sm disabled:opacity-50"
+                            className="w-full inline-flex justify-center items-center rounded-lg border border-transparent shadow-sm px-6 min-h-[44px] bg-brand-primary text-base font-bold text-white hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary sm:w-auto sm:text-sm disabled:opacity-50 transition-colors"
                           >
                             {requesting ? 'جاري الإرسال...' : 'إرسال الطلب'}
                           </button>
                           <button
                             type="button"
                             onClick={() => setIsRequestModalOpen(false)}
-                            className="mt-3 w-full inline-flex justify-center rounded-md border border-brand-border shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-brand-bg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary sm:mt-0 sm:ms-3 sm:w-auto sm:text-sm"
+                            className="mt-3 sm:mt-0 w-full inline-flex justify-center items-center rounded-lg border border-brand-border shadow-sm px-6 min-h-[44px] bg-white text-base font-bold text-gray-700 hover:bg-brand-bg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary sm:w-auto sm:text-sm transition-colors"
                           >
                             إلغاء
                           </button>

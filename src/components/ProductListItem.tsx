@@ -21,8 +21,8 @@ export function ProductListItem({ part, isSaved, onToggleSave, onImageClick }: P
       className="flex flex-col bg-white rounded-xl shadow-sm border border-brand-border overflow-hidden hover:shadow-md transition-shadow cursor-pointer" 
       onClick={() => onImageClick(part)}
     >
-      <div className="flex flex-row-reverse p-3 gap-3">
-        {/* Image Section (Left) */}
+      <div className="flex flex-row p-3 gap-3">
+        {/* Image Section (Right in RTL) */}
         <div className="relative w-28 h-28 sm:w-32 sm:h-32 flex-shrink-0 bg-brand-bg rounded-lg overflow-hidden">
           {part.imageUrls && part.imageUrls.length > 0 ? (
             <img src={part.imageUrls[0]} alt={part.partName} className="w-full h-full object-cover" />
@@ -36,23 +36,24 @@ export function ProductListItem({ part, isSaved, onToggleSave, onImageClick }: P
             </div>
           )}
           
-          {/* Favorite Button */}
+          {/* Favorite Button - 44px touch target */}
           <button 
             onClick={(e) => { e.stopPropagation(); onToggleSave(part.id); }} 
-            className="absolute top-1.5 left-1.5 p-1.5 bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-red-500 shadow-sm transition-colors"
+            className="absolute top-1 left-1 w-11 h-11 flex items-center justify-center bg-white/80 backdrop-blur-sm rounded-full text-gray-400 hover:text-red-500 shadow-sm transition-colors"
+            aria-label="حفظ في المفضلة"
           >
-            <Heart className={`w-4 h-4 ${isSaved ? 'fill-current text-red-500' : ''}`} />
+            <Heart className={`w-5 h-5 ${isSaved ? 'fill-current text-red-500' : ''}`} />
           </button>
 
           {/* Condition Badge */}
-          <div className={`absolute bottom-0 right-0 text-[10px] px-2 py-0.5 rounded-tl-lg font-bold text-white ${
+          <div className={`absolute bottom-0 right-0 text-[10px] px-2 py-1 rounded-tl-lg font-bold text-white ${
             part.condition === 'new' ? 'bg-brand-primary' : 'bg-orange-500'
           }`}>
              {part.condition === 'new' ? 'جديد' : 'مستعمل'}
           </div>
         </div>
 
-        {/* Content Section (Right) */}
+        {/* Content Section (Left in RTL) */}
         <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 text-start">
            <div>
              <h3 className="text-sm sm:text-base font-bold text-brand-dark line-clamp-2 leading-tight">
@@ -110,18 +111,18 @@ export function ProductListItem({ part, isSaved, onToggleSave, onImageClick }: P
         </div>
       </div>
 
-      {/* Bottom Actions */}
+      {/* Bottom Actions - 44px min height */}
       <div className="flex border-t border-gray-100 p-2 gap-2 bg-brand-bg">
         <button 
           onClick={(e) => { e.stopPropagation(); addToCart(part); }}
-          className="flex-1 flex items-center justify-center gap-1.5 bg-brand-primary text-white py-2 rounded-lg text-sm font-bold hover:bg-brand-primary-hover transition-colors"
+          className="flex-1 flex items-center justify-center gap-1.5 bg-brand-primary text-white min-h-[44px] rounded-lg text-sm font-bold hover:bg-brand-primary-hover transition-colors"
         >
           <ShoppingBag className="w-4 h-4" />
           أضف
         </button>
         <button 
           onClick={(e) => { e.stopPropagation(); onImageClick(part); }}
-          className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-brand-border text-brand-dark py-2 rounded-lg text-sm font-bold hover:bg-brand-bg transition-colors"
+          className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-brand-border text-brand-dark min-h-[44px] rounded-lg text-sm font-bold hover:bg-brand-bg transition-colors"
         >
           <Eye className="w-4 h-4 text-brand-secondary" />
           التفاصيل

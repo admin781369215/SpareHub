@@ -25,6 +25,9 @@
         "location": { "type": "string", "description": "Address or coordinates" },
         "rating": { "type": "number" },
         "reviewCount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "subscriptionStatus": { "type": "string", "enum": ["active", "trial", "expired"] },
+        "subscriptionEndDate": { "type": "string", "format": "date-time" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["ownerUid", "name", "phone", "city", "createdAt"]
@@ -119,9 +122,24 @@
         "createdAt": { "type": "number" }
       },
       "required": ["shopId", "userId", "userName", "rating", "comment", "createdAt"]
+    },
+    "PlatformSettings": {
+      "title": "PlatformSettings",
+      "description": "Global settings for the platform, like subscription price and duration.",
+      "type": "object",
+      "properties": {
+        "subscriptionPrice": { "type": "number", "description": "Price of the subscription" },
+        "subscriptionDays": { "type": "number", "description": "Duration of the subscription in days" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["subscriptionPrice", "subscriptionDays", "updatedAt"]
     }
   },
   "firestore": {
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/PlatformSettings" },
+      "description": "Global platform settings"
+    },
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/User" },
       "description": "User profiles"

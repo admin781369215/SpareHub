@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, getDoc } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import { useAuth } from '../AuthContext';
-import { Part, Shop, PartRequest, RequestResponse, AppNotification } from '../types';
-import { Plus, Edit2, Trash2, Package, Tag, DollarSign, Hash, MessageCircle, CheckCircle, Image as ImageIcon, X, Settings, Star, Upload, Download } from 'lucide-react';
+import { Part, Shop, PartRequest, RequestResponse, AppNotification, Review } from '../types';
+import { Plus, Edit2, Trash2, Package, Tag, DollarSign, Hash, MessageCircle, CheckCircle, Image as ImageIcon, X, Settings, Star, Upload, Download, Clock, XCircle } from 'lucide-react';
 import { handleFirestoreError, OperationType } from '../utils/firestore-errors';
 import { CAR_MAKES, CAR_MODELS, getYears } from '../utils/carData';
 import { LocationPicker } from './LocationPicker';
@@ -17,7 +17,7 @@ export function ShopDashboard() {
   const [loading, setLoading] = useState(true);
   const [isAddingPart, setIsAddingPart] = useState(false);
   const [editingPart, setEditingPart] = useState<Part | null>(null);
-  const [activeTab, setActiveTab] = useState<'inventory' | 'requests' | 'settings'>('inventory');
+  const [activeTab, setActiveTab] = useState<'inventory' | 'requests' | 'settings' | 'reviews'>('inventory');
   const [searchQuery, setSearchQuery] = useState('');
   const [conditionFilter, setConditionFilter] = useState<'all' | 'new' | 'used'>('all');
   const [availabilityFilter, setAvailabilityFilter] = useState<'all' | 'inStock' | 'outOfStock'>('all');
@@ -27,6 +27,11 @@ export function ShopDashboard() {
   const [myResponses, setMyResponses] = useState<RequestResponse[]>([]);
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
   const [responseForm, setResponseForm] = useState({ price: 0, quantity: 1 });
+
+  // Reviews State
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [subscriptionPrice, setSubscriptionPrice] = useState<number>(100);
+  const [subscriptionDays, setSubscriptionDays] = useState<number>(30);
 
   const [newPart, setNewPart] = useState<{
     partNumber: string;
@@ -99,10 +104,35 @@ export function ShopDashboard() {
           handleFirestoreError(error, OperationType.GET, 'requestResponses');
         });
 
+        // Fetch reviews for this shop
+        const qReviews = query(collection(db, 'reviews'), where('shopId', '==', shopData.id));
+        const unsubscribeReviews = onSnapshot(qReviews, (reviewsSnapshot) => {
+          const reviewsList: Review[] = [];
+          reviewsSnapshot.forEach((doc) => {
+            reviewsList.push({ id: doc.id, ...doc.data() } as Review);
+          });
+          reviewsList.sort((a, b) => b.createdAt - a.createdAt);
+          setReviews(reviewsList);
+        }, (error) => {
+          handleFirestoreError(error, OperationType.GET, 'reviews');
+        });
+
+        // Fetch platform settings
+        getDoc(doc(db, 'settings', 'platform')).then((docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setSubscriptionPrice(data.subscriptionPrice || 100);
+            setSubscriptionDays(data.subscriptionDays || 30);
+          }
+        }).catch(error => {
+          console.error("Error fetching platform settings:", error);
+        });
+
         return () => {
           unsubscribeParts();
           unsubscribeRequests();
           unsubscribeResponses();
+          unsubscribeReviews();
         };
       } else {
         setLoading(false);
@@ -251,9 +281,13 @@ export function ShopDashboard() {
     if (!shop || !respondingTo || responseForm.price <= 0 || responseForm.quantity <= 0) return;
 
     try {
+      const request = customerRequests.find(r => r.id === respondingTo);
+      if (!request) return;
+
       const responseData: Omit<RequestResponse, 'id'> = {
         requestId: respondingTo,
         shopId: shop.id,
+        customerUid: request.customerUid,
         price: responseForm.price,
         quantity: responseForm.quantity,
         status: 'pending',
@@ -262,11 +296,8 @@ export function ShopDashboard() {
 
       const docRef = await addDoc(collection(db, 'requestResponses'), responseData);
       
-      // Find the request to get the customerUid
-      const request = customerRequests.find(r => r.id === respondingTo);
-      if (request) {
-        // Create a notification for the customer
-        const notificationData: Omit<AppNotification, 'id'> = {
+      // Create a notification for the customer
+      const notificationData: Omit<AppNotification, 'id'> = {
           userId: request.customerUid,
           title: 'رد جديد على طلبك',
           message: `قام محل "${shop.name}" بالرد على طلبك للقطعة: ${request.partName}`,
@@ -276,7 +307,6 @@ export function ShopDashboard() {
           createdAt: Date.now()
         };
         await addDoc(collection(db, 'notifications'), notificationData);
-      }
 
       setRespondingTo(null);
       setResponseForm({ price: 0, quantity: 1 });
@@ -298,13 +328,43 @@ export function ShopDashboard() {
             <div className="mt-2 max-w-xl text-sm text-brand-secondary mx-auto">
               <p>تحتاج إلى تسجيل تفاصيل محلك قبل أن تتمكن من إضافة المخزون.</p>
             </div>
-            <div className="mt-5">
-              <button
-                type="button"
-                className="inline-flex items-center justify-center px-4 py-2 border border-transparent font-medium rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary sm:text-sm"
-              >
-                تسجيل المحل
-              </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (shop.status === 'pending') {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white shadow sm:rounded-lg border border-yellow-200">
+          <div className="px-4 py-10 sm:p-12 text-center">
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-yellow-100 mb-4">
+              <Clock className="h-8 w-8 text-yellow-600" />
+            </div>
+            <h3 className="text-xl leading-6 font-bold text-gray-900">حسابك قيد المراجعة</h3>
+            <div className="mt-4 max-w-xl text-md text-gray-500 mx-auto">
+              <p>شكراً لتسجيلك في منصة SpareHub. فريقنا يقوم حالياً بمراجعة بيانات متجرك.</p>
+              <p className="mt-2">سيتم تفعيل حسابك قريباً لتتمكن من إضافة قطع الغيار واستقبال الطلبات.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (shop.status === 'rejected') {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white shadow sm:rounded-lg border border-red-200">
+          <div className="px-4 py-10 sm:p-12 text-center">
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+              <XCircle className="h-8 w-8 text-red-600" />
+            </div>
+            <h3 className="text-xl leading-6 font-bold text-gray-900">تم رفض طلب التسجيل</h3>
+            <div className="mt-4 max-w-xl text-md text-gray-500 mx-auto">
+              <p>نأسف، لم يتم قبول طلب تسجيل متجرك في منصة SpareHub.</p>
+              <p className="mt-2">يرجى التواصل مع الدعم الفني لمزيد من التفاصيل.</p>
             </div>
           </div>
         </div>
@@ -339,11 +399,11 @@ export function ShopDashboard() {
           </div>
           <p className="mt-1 text-sm text-brand-secondary">إدارة المخزون والرد على الطلبات.</p>
         </div>
-        <div className="mt-4 flex md:mt-0 md:ms-4 gap-3">
+        <div className="mt-4 flex flex-col sm:flex-row md:mt-0 md:ms-4 gap-3">
           <button
             onClick={downloadCsvTemplate}
             type="button"
-            className="inline-flex items-center px-4 py-2 border border-brand-border rounded-md shadow-sm text-sm font-medium text-brand-dark bg-white hover:bg-brand-bg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+            className="inline-flex items-center justify-center px-4 min-h-[44px] border border-brand-border rounded-lg shadow-sm text-sm font-bold text-brand-dark bg-white hover:bg-brand-bg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary transition-colors"
           >
             <Download className="-ms-1 me-2 h-5 w-5 text-gray-400" aria-hidden="true" />
             تحميل نموذج CSV
@@ -354,21 +414,24 @@ export function ShopDashboard() {
             className="hidden" 
             id="csvUpload" 
             onChange={handleCsvUpload} 
+            disabled={!shop?.subscriptionStatus || shop?.subscriptionStatus === 'expired'}
           />
           <label
             htmlFor="csvUpload"
-            className="inline-flex items-center px-4 py-2 border border-brand-border rounded-md shadow-sm text-sm font-medium text-brand-dark bg-white hover:bg-brand-bg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary cursor-pointer"
+            className={`inline-flex items-center justify-center px-4 min-h-[44px] border border-brand-border rounded-lg shadow-sm text-sm font-bold text-brand-dark bg-white hover:bg-brand-bg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary transition-colors ${(!shop?.subscriptionStatus || shop?.subscriptionStatus === 'expired') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
           >
             <Upload className="-ms-1 me-2 h-5 w-5 text-gray-400" aria-hidden="true" />
             استيراد من CSV
           </label>
           <button
             onClick={() => {
+              if (!shop?.subscriptionStatus || shop?.subscriptionStatus === 'expired') return;
               setActiveTab('inventory');
               setIsAddingPart(!isAddingPart);
             }}
+            disabled={!shop?.subscriptionStatus || shop?.subscriptionStatus === 'expired'}
             type="button"
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+            className="inline-flex items-center justify-center px-4 min-h-[44px] border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <Plus className="-ms-1 me-2 h-5 w-5" aria-hidden="true" />
             إضافة قطعة جديدة
@@ -385,7 +448,7 @@ export function ShopDashboard() {
               activeTab === 'inventory'
                 ? 'border-brand-primary text-brand-primary'
                 : 'border-transparent text-brand-secondary hover:text-brand-dark hover:border-brand-border'
-            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm min-h-[44px]`}
           >
             المخزون
           </button>
@@ -395,7 +458,7 @@ export function ShopDashboard() {
               activeTab === 'requests'
                 ? 'border-brand-primary text-brand-primary'
                 : 'border-transparent text-brand-secondary hover:text-gray-700 hover:border-brand-border'
-            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center min-h-[44px]`}
           >
             طلبات العملاء
             {customerRequests.length > 0 && (
@@ -410,10 +473,21 @@ export function ShopDashboard() {
               activeTab === 'settings'
                 ? 'border-brand-primary text-brand-primary'
                 : 'border-transparent text-brand-secondary hover:text-gray-700 hover:border-brand-border'
-            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center min-h-[44px]`}
           >
             <Settings className="me-2 h-4 w-4" />
             إعدادات المتجر
+          </button>
+          <button
+            onClick={() => setActiveTab('reviews')}
+            className={`${
+              activeTab === 'reviews'
+                ? 'border-brand-primary text-brand-primary'
+                : 'border-transparent text-brand-secondary hover:text-gray-700 hover:border-brand-border'
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center min-h-[44px]`}
+          >
+            <Star className="me-2 h-4 w-4" />
+            التقييمات
           </button>
         </nav>
       </div>
@@ -614,18 +688,18 @@ export function ShopDashboard() {
                   {imageFiles.length > 0 && (
                     <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
                       {imageFiles.map((file, index) => (
-                        <div key={index} className="relative group">
+                        <div key={index} className="relative group rounded-md overflow-hidden border border-brand-border">
                           <img
                             src={URL.createObjectURL(file)}
                             alt={`Preview ${index}`}
-                            className="h-24 w-full object-cover rounded-md border border-brand-border"
+                            className="h-24 w-full object-cover"
                           />
                           <button
                             type="button"
                             onClick={() => removeImage(index)}
-                            className="absolute top-1 right-1 bg-red-100 text-red-600 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute top-0 right-0 bg-red-500/90 text-white rounded-bl-lg min-w-[44px] min-h-[44px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                           >
-                            <X className="h-4 w-4" />
+                            <X className="h-5 w-5" />
                           </button>
                         </div>
                       ))}
@@ -633,14 +707,14 @@ export function ShopDashboard() {
                   )}
                 </div>
               </div>
-              <div className="flex justify-end space-x-3 space-x-reverse">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
                 <button
                   type="button"
                   onClick={() => {
                     setIsAddingPart(false);
                     setImageFiles([]);
                   }}
-                  className="bg-white py-2 px-4 border border-brand-border rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-brand-bg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+                  className="bg-white min-h-[44px] px-6 border border-brand-border rounded-lg shadow-sm text-sm font-bold text-gray-700 hover:bg-brand-bg transition-colors w-full sm:w-auto"
                   disabled={uploadingImages}
                 >
                   إلغاء
@@ -649,14 +723,14 @@ export function ShopDashboard() {
                   type="button"
                   onClick={() => savePart(true)}
                   disabled={uploadingImages}
-                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-brand-primary bg-brand-primary/10 hover:bg-brand-primary/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary disabled:opacity-50"
+                  className="inline-flex justify-center items-center min-h-[44px] px-6 border border-transparent shadow-sm text-sm font-bold rounded-lg text-brand-primary bg-brand-primary/10 hover:bg-brand-primary/20 transition-colors disabled:opacity-50 w-full sm:w-auto"
                 >
                   {uploadingImages ? 'جاري الحفظ...' : 'حفظ وإضافة قطعة أخرى'}
                 </button>
                 <button
                   type="submit"
                   disabled={uploadingImages}
-                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary disabled:opacity-50"
+                  className="inline-flex justify-center items-center min-h-[44px] px-6 border border-transparent shadow-sm text-sm font-bold rounded-lg text-white bg-brand-primary hover:bg-brand-primary-hover transition-colors disabled:opacity-50 w-full sm:w-auto"
                 >
                   {uploadingImages ? 'جاري الحفظ...' : 'حفظ القطعة'}
                 </button>
@@ -681,13 +755,13 @@ export function ShopDashboard() {
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setPartToDelete(null)}
-                className="bg-white py-2 px-4 border border-brand-border rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-brand-bg"
+                className="bg-white min-h-[44px] px-6 border border-brand-border rounded-lg shadow-sm text-sm font-bold text-gray-700 hover:bg-brand-bg transition-colors"
               >
                 إلغاء
               </button>
               <button
                 onClick={() => handleDeletePart(partToDelete)}
-                className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+                className="inline-flex justify-center items-center min-h-[44px] px-6 border border-transparent shadow-sm text-sm font-bold rounded-lg text-white bg-red-600 hover:bg-red-700 transition-colors"
               >
                 حذف
               </button>
@@ -815,11 +889,11 @@ export function ShopDashboard() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
-                            <button onClick={() => setEditingPart(part)} className="text-brand-primary hover:text-brand-primary-hover me-4">
-                              <Edit2 className="h-4 w-4" />
+                            <button onClick={() => setEditingPart(part)} className="text-brand-primary hover:text-brand-primary-hover me-2 p-2 min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-lg hover:bg-brand-primary/10 transition-colors">
+                              <Edit2 className="h-5 w-5" />
                             </button>
-                            <button onClick={() => { console.log('Delete button clicked for:', part.id); setPartToDelete(part.id); }} className="text-red-600 hover:text-red-900 relative z-10">
-                              <Trash2 className="h-4 w-4" />
+                            <button onClick={() => { console.log('Delete button clicked for:', part.id); setPartToDelete(part.id); }} className="text-red-600 hover:text-red-900 relative z-10 p-2 min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors">
+                              <Trash2 className="h-5 w-5" />
                             </button>
                           </td>
                         </tr>
@@ -880,10 +954,14 @@ export function ShopDashboard() {
                       {!hasResponded && !isResponding && (
                         <div className="mt-4">
                           <button
-                            onClick={() => setRespondingTo(request.id)}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-brand-primary-hover bg-brand-primary\/20 hover:bg-brand-primary/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+                            onClick={() => {
+                              if (!shop?.subscriptionStatus || shop?.subscriptionStatus === 'expired') return;
+                              setRespondingTo(request.id);
+                            }}
+                            disabled={!shop?.subscriptionStatus || shop?.subscriptionStatus === 'expired'}
+                            className="inline-flex items-center justify-center px-4 min-h-[44px] border border-transparent text-sm font-bold rounded-lg text-brand-primary-hover bg-brand-primary/20 hover:bg-brand-primary/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
-                            <MessageCircle className="me-1.5 h-4 w-4" />
+                            <MessageCircle className="me-1.5 h-5 w-5" />
                             تقديم عرض سعر
                           </button>
                         </div>
@@ -963,14 +1041,14 @@ export function ShopDashboard() {
                             <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
                               <button
                                 type="submit"
-                                className="flex-1 sm:flex-none inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+                                className="flex-1 sm:flex-none inline-flex justify-center items-center px-4 min-h-[44px] border border-transparent text-sm font-bold rounded-lg shadow-sm text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary transition-colors"
                               >
                                 إرسال
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setRespondingTo(null)}
-                                className="flex-1 sm:flex-none inline-flex justify-center items-center px-4 py-2 border border-brand-border text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-brand-bg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+                                className="flex-1 sm:flex-none inline-flex justify-center items-center px-4 min-h-[44px] border border-brand-border text-sm font-bold rounded-lg shadow-sm text-gray-700 bg-white hover:bg-brand-bg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary transition-colors"
                               >
                                 إلغاء
                               </button>
@@ -987,10 +1065,11 @@ export function ShopDashboard() {
         </div>
       )}
       {activeTab === 'settings' && (
-        <div className="bg-white shadow sm:rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-brand-dark mb-4">تعديل بيانات المتجر</h3>
-            <form onSubmit={async (e) => {
+        <div className="space-y-6">
+          <div className="bg-white shadow sm:rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg leading-6 font-medium text-brand-dark mb-4">تعديل بيانات المتجر</h3>
+              <form onSubmit={async (e) => {
               e.preventDefault();
               if (!shop) return;
               try {
@@ -1127,15 +1206,107 @@ export function ShopDashboard() {
                 </div>
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex justify-end mt-6">
                 <button
                   type="submit"
-                  className="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+                  className="w-full sm:w-auto inline-flex justify-center items-center px-6 min-h-[44px] border border-transparent shadow-sm text-sm font-bold rounded-lg text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary transition-colors"
                 >
                   حفظ التغييرات
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+
+        <div className="bg-white shadow sm:rounded-lg border border-brand-border mt-6">
+          <div className="px-4 py-5 sm:p-6">
+            <h3 className="text-lg leading-6 font-medium text-brand-dark">
+              معلومات الاشتراك
+            </h3>
+            <div className="mt-4 max-w-xl text-sm text-brand-secondary space-y-3">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <span className="font-medium text-gray-700">حالة الاشتراك:</span>
+                <span className={`font-bold ${
+                  shop?.subscriptionStatus === 'active' ? 'text-green-600' :
+                  shop?.subscriptionStatus === 'trial' ? 'text-blue-600' :
+                  'text-red-600'
+                }`}>
+                  {shop?.subscriptionStatus === 'active' ? 'نشط' :
+                   shop?.subscriptionStatus === 'trial' ? 'تجريبي' : 'غير نشط'}
+                </span>
+              </div>
+              {shop?.subscriptionEndDate && (
+                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                  <span className="font-medium text-gray-700">تاريخ الانتهاء:</span>
+                  <span className="font-bold text-gray-900">
+                    {new Date(shop.subscriptionEndDate).toLocaleDateString('ar-SA')}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center justify-between pb-3">
+                <span className="font-medium text-gray-700">سعر التجديد:</span>
+                <span className="font-bold text-gray-900">
+                  ${subscriptionPrice} / {subscriptionDays} يوم
+                </span>
+              </div>
+              
+              {(!shop?.subscriptionStatus || shop?.subscriptionStatus === 'expired') && (
+                <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+                  <p className="font-bold mb-1">اشتراكك غير نشط!</p>
+                  <p className="text-sm">يرجى التواصل مع الإدارة لتجديد اشتراكك حتى تظهر منتجاتك للعملاء.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+      )}
+      {activeTab === 'reviews' && (
+        <div className="bg-white shadow sm:rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg leading-6 font-medium text-brand-dark">تقييمات العملاء</h3>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold text-brand-dark">{shop?.rating?.toFixed(1) || '0.0'}</span>
+                <div className="flex text-yellow-400">
+                  <Star className="w-6 h-6 fill-current" />
+                </div>
+                <span className="text-sm text-gray-500">({shop?.reviewCount || 0} تقييم)</span>
+              </div>
+            </div>
+            
+            {reviews.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-100">
+                <MessageCircle className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+                <p className="text-gray-500 text-lg">لا توجد تقييمات حتى الآن.</p>
+                <p className="text-gray-400 text-sm mt-1">عندما يقوم العملاء بتقييم متجرك، ستظهر التقييمات هنا.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {reviews.map((review) => (
+                  <div key={review.id} className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <span className="font-bold text-brand-dark text-lg">{review.userName}</span>
+                        <div className="flex text-yellow-400 mt-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className={`w-4 h-4 ${i < review.rating ? 'fill-current' : 'text-gray-200'}`} />
+                          ))}
+                        </div>
+                      </div>
+                      <span className="text-sm text-gray-400">
+                        {new Date(review.createdAt).toLocaleDateString('ar-SA', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </span>
+                    </div>
+                    <p className="text-gray-700 leading-relaxed">{review.comment}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

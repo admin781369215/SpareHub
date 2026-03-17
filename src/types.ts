@@ -19,6 +19,9 @@ export interface Shop {
   longitude?: number;
   rating?: number;
   reviewCount?: number;
+  status?: 'pending' | 'approved' | 'rejected';
+  subscriptionStatus?: 'active' | 'expired' | 'trial';
+  subscriptionEndDate?: number;
   createdAt: string;
 }
 
@@ -52,6 +55,7 @@ export interface RequestResponse {
   id: string;
   requestId: string;
   shopId: string;
+  customerUid: string;
   price: number;
   quantity: number;
   status: 'pending' | 'accepted' | 'rejected';
@@ -91,6 +95,7 @@ export interface OrderItem {
   partName: string;
   price: number;
   quantity: number;
+  shopId: string;
 }
 
 export interface Order {

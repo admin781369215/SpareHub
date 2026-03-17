@@ -28,7 +28,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             <ShoppingBag className="w-5 h-5" />
             عربة التسوق ({items.length})
           </h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full min-h-[44px] min-w-[44px] flex items-center justify-center">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -55,22 +55,22 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                   <div className="flex items-center gap-2 mt-2">
                     <button 
                       onClick={() => updateQuantity(item.part.id, item.quantity - 1)}
-                      className="p-1 bg-gray-100 rounded hover:bg-gray-200"
+                      className="w-11 h-11 flex items-center justify-center bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                     >
-                      <Minus className="w-3 h-3" />
+                      <Minus className="w-4 h-4" />
                     </button>
-                    <span className="text-sm font-medium w-6 text-center">{item.quantity}</span>
+                    <span className="text-sm font-bold w-6 text-center">{item.quantity}</span>
                     <button 
                       onClick={() => updateQuantity(item.part.id, item.quantity + 1)}
-                      className="p-1 bg-gray-100 rounded hover:bg-gray-200"
+                      className="w-11 h-11 flex items-center justify-center bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                     >
-                      <Plus className="w-3 h-3" />
+                      <Plus className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={() => removeFromCart(item.part.id)}
-                      className="ml-auto text-red-500 hover:text-red-700"
+                      className="mr-auto w-11 h-11 flex items-center justify-center text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 </div>

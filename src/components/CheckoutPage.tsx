@@ -30,7 +30,8 @@ export function CheckoutPage() {
           partId: item.part.id,
           partName: item.part.partName,
           price: item.part.price,
-          quantity: item.quantity
+          quantity: item.quantity,
+          shopId: item.part.shopId
         })),
         totalPrice,
         shippingAddress: address,
@@ -55,7 +56,12 @@ export function CheckoutPage() {
     return (
       <div className="max-w-7xl mx-auto px-4 py-12 text-center">
         <h2 className="text-2xl font-bold mb-4">عربة التسوق فارغة</h2>
-        <button onClick={() => navigate('/')} className="text-brand-primary font-bold">العودة للتسوق</button>
+        <button 
+          onClick={() => navigate('/')} 
+          className="inline-flex items-center justify-center px-6 min-h-[44px] bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-primary-hover transition-colors"
+        >
+          العودة للتسوق
+        </button>
       </div>
     );
   }

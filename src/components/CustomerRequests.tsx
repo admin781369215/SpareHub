@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, addDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
-import { PartRequest, RequestResponse, Shop } from '../types';
-import { Package, Clock, CheckCircle, XCircle, DollarSign, MapPin, Phone } from 'lucide-react';
+import { PartRequest, RequestResponse, Shop, AppNotification } from '../types';
+import { Package, Clock, CheckCircle, XCircle, DollarSign, MapPin, Phone, Star } from 'lucide-react';
+import { ShopProfileModal } from './ShopProfileModal';
 
 interface RequestWithResponses extends PartRequest {
   responses: (RequestResponse & { shop?: Shop })[];
@@ -12,6 +13,7 @@ export default function CustomerRequests() {
   const [requests, setRequests] = useState<RequestWithResponses[]>([]);
   const [loading, setLoading] = useState(true);
   const [shops, setShops] = useState<Record<string, Shop>>({});
+  const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
 
   useEffect(() => {
     if (!auth.currentUser) return;
@@ -47,7 +49,8 @@ export default function CustomerRequests() {
         // Fetch responses for this request
         const responsesQuery = query(
           collection(db, 'requestResponses'),
-          where('requestId', '==', request.id)
+          where('requestId', '==', request.id),
+          where('customerUid', '==', auth.currentUser.uid)
         );
         
         const responsesSnapshot = await getDocs(responsesQuery);
@@ -77,7 +80,7 @@ export default function CustomerRequests() {
     return () => unsubscribeRequests();
   }, [shops]); // Re-run when shops are loaded
 
-  const handleAcceptOffer = async (requestId: string, responseId: string) => {
+  const handleAcceptOffer = async (requestId: string, responseId: string, shopId: string, partName: string) => {
     try {
       // Update the response status to accepted
       await updateDoc(doc(db, 'requestResponses', responseId), {
@@ -89,6 +92,22 @@ export default function CustomerRequests() {
         status: 'fulfilled'
       });
       
+      // Notify the shop owner
+      const shopDoc = await getDocs(query(collection(db, 'shops'), where('__name__', '==', shopId)));
+      if (!shopDoc.empty) {
+        const shopOwnerUid = shopDoc.docs[0].data().ownerUid;
+        const notificationData: Omit<AppNotification, 'id'> = {
+          userId: shopOwnerUid,
+          title: 'تم قبول عرضك!',
+          message: `قام العميل بقبول عرضك لقطعة: ${partName}`,
+          read: false,
+          type: 'request_response',
+          relatedId: requestId,
+          createdAt: Date.now()
+        };
+        await addDoc(collection(db, 'notifications'), notificationData);
+      }
+      
       // Note: In a real app, you might want to reject other pending offers here
     } catch (error) {
       console.error("Error accepting offer:", error);
@@ -96,11 +115,27 @@ export default function CustomerRequests() {
     }
   };
 
-  const handleRejectOffer = async (responseId: string) => {
+  const handleRejectOffer = async (responseId: string, shopId: string, partName: string) => {
     try {
       await updateDoc(doc(db, 'requestResponses', responseId), {
         status: 'rejected'
       });
+
+      // Notify the shop owner
+      const shopDoc = await getDocs(query(collection(db, 'shops'), where('__name__', '==', shopId)));
+      if (!shopDoc.empty) {
+        const shopOwnerUid = shopDoc.docs[0].data().ownerUid;
+        const notificationData: Omit<AppNotification, 'id'> = {
+          userId: shopOwnerUid,
+          title: 'تم رفض عرضك',
+          message: `قام العميل برفض عرضك لقطعة: ${partName}`,
+          read: false,
+          type: 'request_response',
+          relatedId: responseId,
+          createdAt: Date.now()
+        };
+        await addDoc(collection(db, 'notifications'), notificationData);
+      }
     } catch (error) {
       console.error("Error rejecting offer:", error);
       alert("حدث خطأ أثناء رفض العرض");
@@ -167,7 +202,18 @@ export default function CustomerRequests() {
                         <div className="flex justify-between items-start">
                           <div>
                             <div className="flex items-center">
-                              <h5 className="text-sm font-bold text-brand-dark">{offer.shop?.name || 'محل غير معروف'}</h5>
+                              <button 
+                                onClick={() => offer.shop && setSelectedShop({ id: offer.shopId, ...offer.shop } as Shop)}
+                                className="text-sm font-bold text-brand-dark hover:text-brand-primary transition-colors flex items-center gap-1 min-h-[44px]"
+                              >
+                                {offer.shop?.name || 'محل غير معروف'}
+                                {offer.shop?.rating ? (
+                                  <span className="flex items-center text-xs text-yellow-500 bg-yellow-50 px-1.5 py-0.5 rounded-full mr-2">
+                                    <Star className="w-3 h-3 fill-current ml-0.5" />
+                                    {offer.shop.rating.toFixed(1)}
+                                  </span>
+                                ) : null}
+                              </button>
                               {offer.status === 'accepted' && (
                                 <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
                                   <CheckCircle className="w-3 h-3 mr-1" /> تم القبول
@@ -208,14 +254,14 @@ export default function CustomerRequests() {
                           {request.status === 'open' && offer.status === 'pending' && (
                             <div className="flex flex-col space-y-2">
                               <button
-                                onClick={() => handleAcceptOffer(request.id, offer.id)}
-                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                onClick={() => handleAcceptOffer(request.id, offer.id, offer.shopId, request.partName)}
+                                className="inline-flex items-center justify-center px-4 min-h-[44px] border border-transparent text-sm font-bold rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                               >
                                 قبول العرض
                               </button>
                               <button
-                                onClick={() => handleRejectOffer(offer.id)}
-                                className="inline-flex items-center px-3 py-1.5 border border-brand-border text-xs font-medium rounded shadow-sm text-brand-dark bg-white hover:bg-brand-bg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+                                onClick={() => handleRejectOffer(offer.id, offer.shopId, request.partName)}
+                                className="inline-flex items-center justify-center px-4 min-h-[44px] border border-brand-border text-sm font-bold rounded-lg shadow-sm text-brand-dark bg-white hover:bg-brand-bg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
                               >
                                 رفض
                               </button>
@@ -230,6 +276,15 @@ export default function CustomerRequests() {
             </div>
           ))}
         </div>
+      )}
+
+      {selectedShop && (
+        <ShopProfileModal
+          shop={selectedShop}
+          isOpen={!!selectedShop}
+          onClose={() => setSelectedShop(null)}
+          canReview={false}
+        />
       )}
     </div>
   );

@@ -49,9 +49,10 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick }: Produc
         {/* Favorite Button */}
         <button 
           onClick={(e) => { e.stopPropagation(); onToggleSave(part.id); }} 
-          className="absolute top-3 left-3 p-2 bg-white/90 backdrop-blur-sm rounded-full text-brand-secondary hover:text-red-500 shadow-sm transition-colors z-10"
+          className="absolute top-2 left-2 w-11 h-11 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full text-brand-secondary hover:text-red-500 shadow-sm transition-colors z-10"
+          aria-label="حفظ في المفضلة"
         >
-          <Heart className={`w-4 h-4 ${isSaved ? 'fill-current text-red-500' : ''}`} />
+          <Heart className={`w-5 h-5 ${isSaved ? 'fill-current text-red-500' : ''}`} />
         </button>
       </div>
 
@@ -84,23 +85,23 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick }: Produc
         </div>
 
         {/* Price & Action */}
-        <div className="flex items-center justify-between mt-auto pt-4 border-t border-brand-border">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-auto pt-4 border-t border-brand-border">
           <div className="flex flex-col">
             <span className="text-xs text-brand-secondary">السعر</span>
-            <span className="text-xl font-bold text-brand-primary">${part.price}</span>
+            <span className="text-lg sm:text-xl font-bold text-brand-primary">${part.price}</span>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             <button 
-              onClick={() => onClick(part)}
-              className="bg-brand-bg text-brand-dark hover:bg-brand-primary hover:text-white px-3 py-2 rounded-lg text-xs font-bold transition-colors"
+              onClick={(e) => { e.stopPropagation(); onClick(part); }}
+              className="flex-1 sm:flex-none bg-brand-bg text-brand-dark hover:bg-brand-primary hover:text-white px-2 sm:px-3 min-h-[44px] rounded-lg text-xs font-bold transition-colors flex items-center justify-center"
             >
               التفاصيل
             </button>
             <button 
-              onClick={() => addToCart(part)}
-              className="bg-brand-primary text-white hover:bg-brand-primary-hover px-3 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1"
+              onClick={(e) => { e.stopPropagation(); addToCart(part); }}
+              className="flex-1 sm:flex-none bg-brand-primary text-white hover:bg-brand-primary-hover px-2 sm:px-3 min-h-[44px] rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1"
             >
-              <ShoppingBag className="w-3 h-3" />
+              <ShoppingBag className="w-4 h-4" />
               أضف
             </button>
           </div>

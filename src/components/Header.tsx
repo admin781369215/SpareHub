@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { useCart } from '../contexts/CartContext';
-import { LogOut, User as UserIcon, Settings, Wrench, Store, ClipboardList, Menu, Search, Heart, ShoppingCart, ShieldCheck, Phone, Mail, Bell, CheckCircle } from 'lucide-react';
+import { LogOut, User as UserIcon, Settings, Wrench, Store, ClipboardList, Menu, Search, Heart, ShoppingCart, ShieldCheck, Phone, Mail, Bell, CheckCircle, Camera } from 'lucide-react';
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { AppNotification } from '../types';
@@ -83,7 +83,7 @@ export function Header() {
   const isHidden = scrollDirection === 'down' && !isAtTop && !isMenuOpen && !showNotifications;
 
   return (
-    <header className={`bg-brand-dark border-b border-brand-dark sticky top-0 z-50 transition-transform duration-300 ${isHidden ? '-translate-y-full' : 'translate-y-0'}`}>
+    <header className={`bg-brand-dark border-b border-brand-dark sticky top-0 z-50 transition-transform duration-300 ${isHidden ? 'md:-translate-y-full' : 'translate-y-0'}`}>
       {/* Top Bar */}
       <div className="bg-brand-dark text-brand-secondary text-xs py-1.5 border-b border-white/10 hidden md:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
@@ -109,7 +109,7 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-20 items-center gap-4 md:gap-8">
           {/* Logo */}
-          <div className="flex items-center shrink-0">
+          <div className={`flex items-center shrink-0 transition-all duration-300 ${(!user || dbUser?.role === 'customer') && !isAtTop ? 'md:flex hidden' : 'flex'}`}>
             <Link to="/" className="flex items-center gap-3 group">
               <div className="bg-white p-1 rounded-xl group-hover:bg-brand-bg transition-colors shadow-sm border border-gray-100 flex items-center justify-center overflow-hidden w-10 h-10 md:w-12 md:h-12">
                 <img 
@@ -305,21 +305,54 @@ export function Header() {
               </button>
             </div>
           )}
+
+          {/* Mobile Icons (Customers/Guests) */}
+          {(!user || dbUser?.role === 'customer') && (
+            <div className="md:hidden flex items-center gap-3 flex-1 justify-end">
+              {/* Search Bar (Scrolled Down) */}
+              <div className={`transition-all duration-300 overflow-hidden flex-1 ${!isAtTop ? 'max-w-full opacity-100' : 'max-w-0 opacity-0'}`}>
+                <form onSubmit={handleSearch} className="w-full relative flex items-center bg-[#222] rounded-full overflow-hidden p-1 border border-white/10 focus-within:ring-1 focus-within:ring-white/30 transition-all">
+                  <Search className="w-4 h-4 text-gray-400 ml-2 shrink-0" />
+                  <input 
+                    type="text" 
+                    placeholder="ابحث برقم القطعة..." 
+                    className="w-full px-2 py-1.5 bg-transparent border-none focus:outline-none focus:ring-0 text-white text-sm placeholder-gray-400"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <button type="button" className="p-1.5 text-gray-400 hover:text-white shrink-0">
+                    <Camera className="w-4 h-4" />
+                  </button>
+                </form>
+              </div>
+
+              {/* Cart Icon */}
+              <button onClick={() => window.dispatchEvent(new CustomEvent('open-cart'))} className="w-10 h-10 rounded-full bg-[#222] flex items-center justify-center text-white hover:bg-[#333] transition-colors relative shrink-0">
+                <ShoppingCart className="w-5 h-5" />
+                {items.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-brand-primary text-brand-dark text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center border border-brand-dark">
+                    {items.reduce((sum, item) => sum + item.quantity, 0)}
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Mobile Search Bar */}
+        {/* Mobile Search Bar (At Top) */}
         {(!user || dbUser?.role === 'customer') && (
-          <div className="md:hidden pb-4 px-2">
-            <form onSubmit={handleSearch} className="w-full relative flex items-center bg-white rounded-full shadow-sm overflow-hidden p-1 border border-brand-secondary/20 focus-within:ring-2 focus-within:ring-brand-primary focus-within:border-transparent transition-all">
+          <div className={`md:hidden px-2 transition-all duration-300 overflow-hidden ${isAtTop ? 'h-[60px] opacity-100 pb-4' : 'h-0 opacity-0 pb-0'}`}>
+            <form onSubmit={handleSearch} className="w-full relative flex items-center bg-[#222] rounded-full shadow-sm overflow-hidden p-1 border border-white/10 focus-within:ring-1 focus-within:ring-white/30 transition-all">
+              <Search className="w-4 h-4 text-gray-400 ml-2 shrink-0" />
               <input 
                 type="text" 
                 placeholder="ابحث برقم القطعة أو اسمها..." 
-                className="w-full px-4 py-2 bg-transparent border-none focus:outline-none focus:ring-0 text-brand-dark text-sm placeholder-gray-400"
+                className="w-full px-2 py-2 bg-transparent border-none focus:outline-none focus:ring-0 text-white text-sm placeholder-gray-400"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <button type="submit" className="bg-brand-primary text-brand-dark p-2.5 rounded-full hover:bg-brand-primary-hover transition-colors flex items-center justify-center shrink-0 shadow-sm">
-                <Search className="w-4 h-4" />
+              <button type="button" className="p-2 text-gray-400 hover:text-white shrink-0">
+                <Camera className="w-5 h-5" />
               </button>
             </form>
           </div>

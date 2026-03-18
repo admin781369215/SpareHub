@@ -107,7 +107,7 @@ export function Header() {
 
       {/* Main Header */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-20 items-center gap-4 md:gap-8">
+        <div className={`flex justify-between h-20 items-center gap-4 md:gap-8 ${(!user || dbUser?.role === 'customer') ? 'hidden md:flex' : ''}`}>
           {/* Logo */}
           <div className={`flex items-center shrink-0 transition-all duration-300 ${(!user || dbUser?.role === 'customer') && !isAtTop ? 'md:flex hidden' : 'flex'}`}>
             <Link to="/" className="flex items-center gap-3 group">
@@ -131,17 +131,17 @@ export function Header() {
 
           {/* Search Bar (Desktop) */}
           <div className="flex-1 max-w-2xl hidden md:flex mx-8">
-            <form onSubmit={handleSearch} className="w-full relative flex items-center bg-white rounded-full shadow-sm overflow-hidden p-1 border border-brand-secondary/20 focus-within:ring-2 focus-within:ring-brand-primary focus-within:border-transparent transition-all">
+            <form onSubmit={handleSearch} className="w-full relative flex items-center bg-[#222] rounded-full shadow-sm overflow-hidden p-1 border border-white/10 focus-within:ring-1 focus-within:ring-white/30 transition-all">
+              <Search className="w-5 h-5 text-gray-400 ml-3 shrink-0" />
               <input 
                 type="text" 
                 placeholder="ابحث برقم القطعة أو اسمها..." 
-                className="w-full px-5 py-2.5 bg-transparent border-none focus:outline-none focus:ring-0 text-brand-dark placeholder-gray-400"
+                className="w-full px-3 py-2.5 bg-transparent border-none focus:outline-none focus:ring-0 text-white placeholder-gray-400"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <button type="submit" className="bg-brand-primary text-brand-dark px-6 py-2.5 rounded-full font-bold hover:bg-brand-primary-hover transition-colors flex items-center justify-center shrink-0 shadow-sm">
-                <Search className="w-5 h-5 ml-2" />
-                بحث
+              <button type="button" className="p-3 text-gray-400 hover:text-white shrink-0">
+                <Camera className="w-5 h-5" />
               </button>
             </form>
           </div>
@@ -266,8 +266,15 @@ export function Header() {
             </Link>
 
             {/* Cart / Requests */}
-            <Link to="/my-requests" className="flex items-center gap-2 text-white hover:text-brand-primary transition-colors relative min-h-[44px] min-w-[44px]">
-              <ShoppingCart className="h-6 w-6" />
+            <Link to="/my-requests" className="flex items-center gap-3 text-white hover:text-brand-primary transition-colors relative min-h-[44px] min-w-[44px]">
+              <div className="w-10 h-10 rounded-full bg-[#222] flex items-center justify-center text-white hover:bg-[#333] transition-colors relative">
+                <ShoppingCart className="w-5 h-5" />
+                {items.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-brand-primary text-brand-dark text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center border border-brand-dark">
+                    {items.reduce((sum, item) => sum + item.quantity, 0)}
+                  </span>
+                )}
+              </div>
               <div className="hidden lg:block text-right">
                 <div className="text-xs text-brand-secondary">الطلبات</div>
                 <div className="text-sm font-bold">سلتي</div>
@@ -306,28 +313,26 @@ export function Header() {
             </div>
           )}
 
-          {/* Mobile Icons (Customers/Guests) */}
-          {(!user || dbUser?.role === 'customer') && (
-            <div className="md:hidden flex items-center gap-3 flex-1 justify-end">
-              {/* Search Bar (Scrolled Down) */}
-              <div className={`transition-all duration-300 overflow-hidden flex-1 ${!isAtTop ? 'max-w-full opacity-100' : 'max-w-0 opacity-0'}`}>
-                <form onSubmit={handleSearch} className="w-full relative flex items-center bg-[#222] rounded-full overflow-hidden p-1 border border-white/10 focus-within:ring-1 focus-within:ring-white/30 transition-all">
-                  <Search className="w-4 h-4 text-gray-400 ml-2 shrink-0" />
-                  <input 
-                    type="text" 
-                    placeholder="ابحث برقم القطعة..." 
-                    className="w-full px-2 py-1.5 bg-transparent border-none focus:outline-none focus:ring-0 text-white text-sm placeholder-gray-400"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  <button type="button" className="p-1.5 text-gray-400 hover:text-white shrink-0">
-                    <Camera className="w-4 h-4" />
-                  </button>
-                </form>
-              </div>
+        </div>
 
-              {/* Cart Icon */}
-              <button onClick={() => window.dispatchEvent(new CustomEvent('open-cart'))} className="w-10 h-10 rounded-full bg-[#222] flex items-center justify-center text-white hover:bg-[#333] transition-colors relative shrink-0">
+        {/* Mobile Header (Customers/Guests) */}
+        {(!user || dbUser?.role === 'customer') && (
+          <div className={`md:hidden relative w-full transition-all duration-300 ${isAtTop ? 'h-[120px]' : 'h-[72px]'}`}>
+            {/* Logo */}
+            <div className={`absolute top-4 right-0 transition-all duration-300 origin-right ${isAtTop ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-90 pointer-events-none'}`}>
+              <Link to="/" className="flex items-center gap-3 group">
+                <div className="bg-white p-1 rounded-xl shadow-sm border border-gray-100 flex items-center justify-center overflow-hidden w-10 h-10">
+                  <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+                </div>
+                <span className="text-xl font-bold tracking-tight text-white">
+                  سبير<span className="text-brand-primary">هب</span>
+                </span>
+              </Link>
+            </div>
+
+            {/* Cart Icon */}
+            <div className="absolute top-4 left-0 z-10">
+              <button onClick={() => window.dispatchEvent(new CustomEvent('open-cart'))} className="w-10 h-10 rounded-full bg-[#222] flex items-center justify-center text-white hover:bg-[#333] transition-colors relative">
                 <ShoppingCart className="w-5 h-5" />
                 {items.length > 0 && (
                   <span className="absolute -top-1 -right-1 bg-brand-primary text-brand-dark text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center border border-brand-dark">
@@ -336,25 +341,23 @@ export function Header() {
                 )}
               </button>
             </div>
-          )}
-        </div>
 
-        {/* Mobile Search Bar (At Top) */}
-        {(!user || dbUser?.role === 'customer') && (
-          <div className={`md:hidden px-2 transition-all duration-300 overflow-hidden ${isAtTop ? 'h-[60px] opacity-100 pb-4' : 'h-0 opacity-0 pb-0'}`}>
-            <form onSubmit={handleSearch} className="w-full relative flex items-center bg-[#222] rounded-full shadow-sm overflow-hidden p-1 border border-white/10 focus-within:ring-1 focus-within:ring-white/30 transition-all">
-              <Search className="w-4 h-4 text-gray-400 ml-2 shrink-0" />
-              <input 
-                type="text" 
-                placeholder="ابحث برقم القطعة أو اسمها..." 
-                className="w-full px-2 py-2 bg-transparent border-none focus:outline-none focus:ring-0 text-white text-sm placeholder-gray-400"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <button type="button" className="p-2 text-gray-400 hover:text-white shrink-0">
-                <Camera className="w-5 h-5" />
-              </button>
-            </form>
+            {/* Search Bar */}
+            <div className={`absolute transition-all duration-300 ${isAtTop ? 'top-[64px] left-0 right-0' : 'top-4 left-12 right-0'}`}>
+              <form onSubmit={handleSearch} className="w-full relative flex items-center bg-[#222] rounded-full shadow-sm overflow-hidden p-1 border border-white/10 focus-within:ring-1 focus-within:ring-white/30 transition-all">
+                <Search className="w-4 h-4 text-gray-400 ml-2 shrink-0" />
+                <input 
+                  type="text" 
+                  placeholder="ابحث برقم القطعة أو اسمها..." 
+                  className="w-full px-2 py-2 bg-transparent border-none focus:outline-none focus:ring-0 text-white text-sm placeholder-gray-400"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <button type="button" className="p-2 text-gray-400 hover:text-white shrink-0">
+                  <Camera className="w-5 h-5" />
+                </button>
+              </form>
+            </div>
           </div>
         )}
       </div>
@@ -434,16 +437,17 @@ export function Header() {
       {isMenuOpen && (
         <div className="md:hidden border-t border-brand-secondary/20 bg-brand-dark p-4 space-y-3">
           {/* Mobile Search */}
-          <form onSubmit={handleSearch} className="w-full relative flex items-center bg-white rounded-full shadow-sm overflow-hidden p-1 border border-brand-secondary/20 focus-within:ring-2 focus-within:ring-brand-primary focus-within:border-transparent transition-all mb-4">
+          <form onSubmit={handleSearch} className="w-full relative flex items-center bg-[#222] rounded-full shadow-sm overflow-hidden p-1 border border-white/10 focus-within:ring-1 focus-within:ring-white/30 transition-all mb-4">
+            <Search className="w-4 h-4 text-gray-400 ml-2 shrink-0" />
             <input 
               type="text" 
               placeholder="ابحث برقم القطعة أو اسمها..." 
-              className="w-full px-4 py-2 bg-transparent border-none focus:outline-none focus:ring-0 text-brand-dark text-sm placeholder-gray-400"
+              className="w-full px-2 py-2 bg-transparent border-none focus:outline-none focus:ring-0 text-white text-sm placeholder-gray-400"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <button type="submit" className="bg-brand-primary text-brand-dark p-2.5 rounded-full hover:bg-brand-primary-hover transition-colors flex items-center justify-center shrink-0 shadow-sm">
-              <Search className="w-4 h-4" />
+            <button type="button" className="p-2 text-gray-400 hover:text-white shrink-0">
+              <Camera className="w-5 h-5" />
             </button>
           </form>
 

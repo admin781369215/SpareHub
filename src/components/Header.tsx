@@ -130,17 +130,18 @@ export function Header() {
           </div>
 
           {/* Search Bar (Desktop) */}
-          <div className="flex-1 max-w-2xl hidden md:flex">
-            <form onSubmit={handleSearch} className="w-full relative flex">
+          <div className="flex-1 max-w-2xl hidden md:flex mx-8">
+            <form onSubmit={handleSearch} className="w-full relative flex items-center bg-white rounded-full shadow-sm overflow-hidden p-1 border border-brand-secondary/20 focus-within:ring-2 focus-within:ring-brand-primary focus-within:border-transparent transition-all">
               <input 
                 type="text" 
                 placeholder="ابحث برقم القطعة أو اسمها..." 
-                className="w-full pl-12 pr-4 py-2.5 rounded-r-lg border-none focus:ring-2 focus:ring-brand-primary text-brand-dark bg-white"
+                className="w-full px-5 py-2.5 bg-transparent border-none focus:outline-none focus:ring-0 text-brand-dark placeholder-gray-400"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <button type="submit" className="bg-brand-primary text-brand-dark px-6 rounded-l-lg font-bold hover:bg-brand-primary-hover transition-colors flex items-center justify-center">
-                <Search className="w-5 h-5" />
+              <button type="submit" className="bg-brand-primary text-brand-dark px-6 py-2.5 rounded-full font-bold hover:bg-brand-primary-hover transition-colors flex items-center justify-center shrink-0 shadow-sm">
+                <Search className="w-5 h-5 ml-2" />
+                بحث
               </button>
             </form>
           </div>
@@ -308,17 +309,17 @@ export function Header() {
 
         {/* Mobile Search Bar */}
         {(!user || dbUser?.role === 'customer') && (
-          <div className="md:hidden pb-4">
-            <form onSubmit={handleSearch} className="w-full relative flex shadow-sm">
+          <div className="md:hidden pb-4 px-2">
+            <form onSubmit={handleSearch} className="w-full relative flex items-center bg-white rounded-full shadow-sm overflow-hidden p-1 border border-brand-secondary/20 focus-within:ring-2 focus-within:ring-brand-primary focus-within:border-transparent transition-all">
               <input 
                 type="text" 
                 placeholder="ابحث برقم القطعة أو اسمها..." 
-                className="w-full pl-12 pr-4 py-2.5 rounded-r-lg border-none focus:ring-2 focus:ring-brand-primary text-brand-dark bg-white"
+                className="w-full px-4 py-2 bg-transparent border-none focus:outline-none focus:ring-0 text-brand-dark text-sm placeholder-gray-400"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <button type="submit" className="bg-brand-primary text-brand-dark px-5 rounded-l-lg font-bold hover:bg-brand-primary-hover transition-colors flex items-center justify-center">
-                <Search className="w-5 h-5" />
+              <button type="submit" className="bg-brand-primary text-brand-dark p-2.5 rounded-full hover:bg-brand-primary-hover transition-colors flex items-center justify-center shrink-0 shadow-sm">
+                <Search className="w-4 h-4" />
               </button>
             </form>
           </div>
@@ -400,16 +401,16 @@ export function Header() {
       {isMenuOpen && (
         <div className="md:hidden border-t border-brand-secondary/20 bg-brand-dark p-4 space-y-3">
           {/* Mobile Search */}
-          <form onSubmit={handleSearch} className="w-full relative flex mb-4">
+          <form onSubmit={handleSearch} className="w-full relative flex items-center bg-white rounded-full shadow-sm overflow-hidden p-1 border border-brand-secondary/20 focus-within:ring-2 focus-within:ring-brand-primary focus-within:border-transparent transition-all mb-4">
             <input 
               type="text" 
               placeholder="ابحث برقم القطعة أو اسمها..." 
-              className="w-full pl-12 pr-4 py-2.5 rounded-r-lg border-none focus:ring-2 focus:ring-brand-primary text-brand-dark bg-white"
+              className="w-full px-4 py-2 bg-transparent border-none focus:outline-none focus:ring-0 text-brand-dark text-sm placeholder-gray-400"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <button type="submit" className="bg-brand-primary text-brand-dark px-4 rounded-l-lg font-bold hover:bg-brand-primary-hover transition-colors flex items-center justify-center">
-              <Search className="w-5 h-5" />
+            <button type="submit" className="bg-brand-primary text-brand-dark p-2.5 rounded-full hover:bg-brand-primary-hover transition-colors flex items-center justify-center shrink-0 shadow-sm">
+              <Search className="w-4 h-4" />
             </button>
           </form>
 

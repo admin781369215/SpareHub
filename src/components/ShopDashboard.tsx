@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, getDoc, deleteField } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import { useAuth } from '../AuthContext';
@@ -19,8 +19,66 @@ export function ShopDashboard() {
   const [editingPart, setEditingPart] = useState<Part | null>(null);
   const [activeTab, setActiveTab] = useState<'inventory' | 'requests' | 'settings' | 'reviews'>('inventory');
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedSearchTerms, setExpandedSearchTerms] = useState<string[]>([]);
+  const [isSearchingAPI, setIsSearchingAPI] = useState(false);
   const [conditionFilter, setConditionFilter] = useState<'all' | 'new' | 'used'>('all');
   const [availabilityFilter, setAvailabilityFilter] = useState<'all' | 'inStock' | 'outOfStock'>('all');
+  const [quickEdit, setQuickEdit] = useState<{ id: string, field: 'location' | 'shelf', value: string } | null>(null);
+
+  const handleQuickSave = async (partId: string, field: 'location' | 'shelf', value: string, closeEdit: boolean = true) => {
+    try {
+      const updateData: any = {};
+      const trimmedValue = value.trim();
+      
+      if (trimmedValue === '') {
+        updateData[field] = deleteField();
+      } else {
+        updateData[field] = trimmedValue;
+      }
+      
+      await updateDoc(doc(db, 'parts', partId), updateData);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `parts/${partId}`);
+    } finally {
+      if (closeEdit) {
+        setQuickEdit(null);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setExpandedSearchTerms([]);
+      setIsSearchingAPI(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setIsSearchingAPI(true);
+      // Simulate API call to fetch alternatives for the search query
+      setTimeout(() => {
+        const query = searchQuery.trim().toLowerCase();
+        let alternatives: string[] = [];
+        
+        // Mock API logic: generate some alternatives based on the query pattern
+        // In a real app, this would hit a global parts compatibility database
+        if (/[0-9]/.test(query) || query.includes('-')) {
+          const base = query.replace(/-alt$/i, '').replace(/^oem-/i, '');
+          if (base !== query) {
+            alternatives.push(base);
+          } else {
+            alternatives.push(`${query}-alt`);
+            alternatives.push(`oem-${query}`);
+          }
+        }
+        
+        setExpandedSearchTerms([query, ...alternatives]);
+        setIsSearchingAPI(false);
+      }, 400); // 400ms API delay
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   
   // Requests State
   const [customerRequests, setCustomerRequests] = useState<PartRequest[]>([]);
@@ -43,6 +101,9 @@ export function ShopDashboard() {
     manufacturer: string;
     price: number;
     quantity: number;
+    location?: string;
+    shelf?: string;
+    compatibleParts?: string[];
   }>({
     partNumber: '',
     partName: '',
@@ -50,10 +111,51 @@ export function ShopDashboard() {
     carModel: '',
     manufacturer: '',
     price: 0,
-    quantity: 1
+    quantity: 1,
+    location: '',
+    shelf: '',
+    compatibleParts: []
   });
+  const [altInput, setAltInput] = useState('');
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [isFindingAlternatives, setIsFindingAlternatives] = useState(false);
+
+  const handleAddAlternative = () => {
+    if (!altInput.trim()) return;
+    const newAlts = altInput.split(',').map(s => s.trim()).filter(Boolean);
+    setNewPart(prev => ({
+      ...prev,
+      compatibleParts: [...new Set([...(prev.compatibleParts || []), ...newAlts])]
+    }));
+    setAltInput('');
+  };
+
+  const removeAlternative = (altToRemove: string) => {
+    setNewPart(prev => ({
+      ...prev,
+      compatibleParts: prev.compatibleParts?.filter(alt => alt !== altToRemove) || []
+    }));
+  };
+
+  const handleFindAlternatives = async () => {
+    if (!newPart.partNumber) return;
+    setIsFindingAlternatives(true);
+    
+    // Simulate API call to find alternatives
+    setTimeout(() => {
+      const mockAlternatives = [
+        `${newPart.partNumber}-ALT1`,
+        `${newPart.partNumber}-ALT2`,
+        `OEM-${newPart.partNumber}`
+      ];
+      setNewPart(prev => ({
+        ...prev,
+        compatibleParts: [...new Set([...(prev.compatibleParts || []), ...mockAlternatives])]
+      }));
+      setIsFindingAlternatives(false);
+    }, 1500);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -164,6 +266,14 @@ export function ShopDashboard() {
         createdAt: new Date().toISOString()
       };
 
+      // Remove undefined/empty fields to match firestore rules
+      if (!partData.location) delete partData.location;
+      if (!partData.shelf) delete partData.shelf;
+      if (!partData.compatibleParts || partData.compatibleParts.length === 0) delete partData.compatibleParts;
+      if (!partData.carMake) delete partData.carMake;
+      if (!partData.carModel) delete partData.carModel;
+      if (!partData.manufacturer) delete partData.manufacturer;
+
       if (imageUrls.length > 0) {
         partData.imageUrls = imageUrls;
       }
@@ -173,7 +283,8 @@ export function ShopDashboard() {
       if (!keepOpen) {
         setIsAddingPart(false);
       }
-      setNewPart({ partNumber: '', partName: '', carMake: '', carModel: '', manufacturer: '', price: 0, quantity: 1 });
+      setNewPart({ partNumber: '', partName: '', carMake: '', carModel: '', manufacturer: '', price: 0, quantity: 1, location: '', shelf: '', compatibleParts: [] });
+      setAltInput('');
       setImageFiles([]);
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'parts');
@@ -188,11 +299,12 @@ export function ShopDashboard() {
   };
 
   const downloadCsvTemplate = () => {
-    const headers = ['اسم القطعة', 'الشركة المصنعة', 'الموديل', 'رقم القطعة', 'السعر', 'الكمية', 'الحالة (new/used)'];
-    const sampleRow = ['مساعدات أمامية', 'تويوتا', 'كامري', 'TY-1234', '150', '5', 'new'];
+    const headers = ['اسم القطعة', 'الشركة المصنعة', 'الموديل', 'رقم القطعة', 'السعر', 'الكمية', 'الحالة (new/used)', 'القسم/الموقع', 'الرف'];
+    const sampleRow = ['مساعدات أمامية', 'تويوتا', 'كامري', 'TY-1234', '150', '5', 'new', 'قسم 3', 'رف أ'];
     
     const csvContent = [headers.join(','), sampleRow.join(',')].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // Add BOM (\uFEFF) to ensure Excel reads it as UTF-8
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     
     const link = document.createElement('a');
@@ -219,7 +331,7 @@ export function ShopDashboard() {
         const row = rows[i].split(',');
         if (row.length < 5) continue; // Skip invalid rows
 
-        const [partName, carMake, carModel, partNumber, priceStr, quantityStr, condition] = row;
+        const [partName, carMake, carModel, partNumber, priceStr, quantityStr, condition, location, shelf] = row;
         
         if (!partName?.trim()) continue;
 
@@ -235,6 +347,9 @@ export function ShopDashboard() {
             condition: condition?.trim() === 'used' ? 'used' : 'new',
             createdAt: new Date().toISOString()
           };
+          
+          if (location?.trim()) partData.location = location.trim();
+          if (shelf?.trim()) partData.shelf = shelf.trim();
 
           await addDoc(collection(db, 'parts'), partData);
           addedCount++;
@@ -539,7 +654,87 @@ export function ShopDashboard() {
                   </div>
                 </div>
 
-                <div className="sm:col-span-2">
+                <div className="sm:col-span-6">
+                  <label htmlFor="compatibleParts" className="block text-sm font-medium text-gray-700">
+                    البدائل (أرقام القطع المتوافقة)
+                  </label>
+                  <div className="mt-1 flex rounded-md shadow-sm">
+                    <input
+                      type="text"
+                      name="compatibleParts"
+                      id="compatibleParts"
+                      className="focus:ring-brand-primary focus:border-brand-primary block w-full sm:text-sm border-brand-border rounded-s-md py-2 border px-3 text-start"
+                      dir="ltr"
+                      placeholder="الطريقة السريعة: 123, 456 أو أدخل قطعة واضغط إضافة"
+                      value={altInput}
+                      onChange={(e) => setAltInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddAlternative(); } }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddAlternative}
+                      className="inline-flex items-center px-3 py-2 border border-s-0 border-brand-border bg-gray-50 text-gray-500 text-sm hover:bg-gray-100"
+                    >
+                      إضافة قطعة أخرى
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleFindAlternatives}
+                      disabled={!newPart.partNumber || isFindingAlternatives}
+                      className="inline-flex items-center px-3 py-2 border border-s-0 border-brand-border rounded-e-md bg-brand-primary/10 text-brand-primary text-sm hover:bg-brand-primary/20 disabled:opacity-50"
+                    >
+                      {isFindingAlternatives ? 'جاري البحث...' : 'إيجاد بدائل'}
+                    </button>
+                  </div>
+                  {newPart.compatibleParts && newPart.compatibleParts.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {newPart.compatibleParts.map((alt, idx) => (
+                        <span key={idx} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-primary/10 text-brand-primary">
+                          <span dir="ltr">{alt}</span>
+                          <button type="button" onClick={() => removeAlternative(alt)} className="ms-1.5 text-brand-primary hover:text-brand-primary-hover">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="sm:col-span-3">
+                  <label htmlFor="location" className="block text-sm font-medium text-gray-700">
+                    القسم / الموقع
+                  </label>
+                  <div className="mt-1">
+                    <input
+                      type="text"
+                      name="location"
+                      id="location"
+                      placeholder="مثال: قسم المحركات"
+                      className="focus:ring-brand-primary focus:border-brand-primary block w-full sm:text-sm border-brand-border rounded-md py-2 border px-3"
+                      value={newPart.location || ''}
+                      onChange={(e) => setNewPart({ ...newPart, location: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="sm:col-span-3">
+                  <label htmlFor="shelf" className="block text-sm font-medium text-gray-700">
+                    الرف
+                  </label>
+                  <div className="mt-1">
+                    <input
+                      type="text"
+                      name="shelf"
+                      id="shelf"
+                      placeholder="مثال: رف A3"
+                      className="focus:ring-brand-primary focus:border-brand-primary block w-full sm:text-sm border-brand-border rounded-md py-2 border px-3"
+                      value={newPart.shelf || ''}
+                      onChange={(e) => setNewPart({ ...newPart, shelf: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="sm:col-span-3">
                   <label htmlFor="carMake" className="block text-sm font-medium text-gray-700">
                     الشركة المصنعة (اختياري)
                   </label>
@@ -827,8 +1022,14 @@ export function ShopDashboard() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {parts
                       .filter(part => {
-                        const matchesSearch = part.partName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                                              part.partNumber.toLowerCase().includes(searchQuery.toLowerCase());
+                        const searchLower = searchQuery.toLowerCase();
+                        const termsToMatch = expandedSearchTerms.length > 0 ? expandedSearchTerms : [searchLower];
+                        
+                        const matchesSearch = termsToMatch.some(term => 
+                          part.partName.toLowerCase().includes(term) || 
+                          part.partNumber.toLowerCase().includes(term) ||
+                          (part.compatibleParts && part.compatibleParts.some(cp => cp.toLowerCase().includes(term)))
+                        );
                         const matchesCondition = conditionFilter === 'all' || part.condition === conditionFilter;
                         const matchesAvailability = availabilityFilter === 'all' || 
                                                     (availabilityFilter === 'inStock' ? part.quantity > 0 : part.quantity === 0);
@@ -843,52 +1044,157 @@ export function ShopDashboard() {
                     ) : (
                       parts
                         .filter(part => {
-                          const matchesSearch = part.partName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                                                part.partNumber.toLowerCase().includes(searchQuery.toLowerCase());
+                          const searchLower = searchQuery.toLowerCase();
+                          const termsToMatch = expandedSearchTerms.length > 0 ? expandedSearchTerms : [searchLower];
+                          
+                          const matchesSearch = termsToMatch.some(term => 
+                            part.partName.toLowerCase().includes(term) || 
+                            part.partNumber.toLowerCase().includes(term) ||
+                            (part.compatibleParts && part.compatibleParts.some(cp => cp.toLowerCase().includes(term)))
+                          );
                           const matchesCondition = conditionFilter === 'all' || part.condition === conditionFilter;
                           const matchesAvailability = availabilityFilter === 'all' || 
                                                       (availabilityFilter === 'inStock' ? part.quantity > 0 : part.quantity === 0);
                           return matchesSearch && matchesCondition && matchesAvailability;
                         })
-                        .map((part) => (
-                        <tr key={part.id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10">
-                                {part.imageUrls && part.imageUrls.length > 0 ? (
-                                  <img className="h-10 w-10 rounded-full object-cover" src={part.imageUrls[0]} alt={part.partName} />
+                        .map((part, index, array) => {
+                          const searchLower = searchQuery.toLowerCase();
+                          const matchesOriginal = searchLower === '' || 
+                            part.partName.toLowerCase().includes(searchLower) || 
+                            part.partNumber.toLowerCase().includes(searchLower) ||
+                            (part.compatibleParts && part.compatibleParts.some(cp => cp.toLowerCase().includes(searchLower)));
+                          
+                          const isApiAlternative = !matchesOriginal && expandedSearchTerms.length > 1;
+
+                          return (
+                          <tr key={part.id} className="hover:bg-brand-primary/10 even:bg-gray-100 bg-white transition-colors border-b border-gray-200 last:border-0">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-10 w-10">
+                                  {part.imageUrls && part.imageUrls.length > 0 ? (
+                                    <img className="h-10 w-10 rounded-full object-cover" src={part.imageUrls[0]} alt={part.partName} />
+                                  ) : (
+                                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                      <ImageIcon className="h-5 w-5 text-gray-400" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="ms-4">
+                                  <div className="text-sm font-medium text-brand-dark flex items-center gap-2">
+                                    {part.partName}
+                                    {isApiAlternative && (
+                                      <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                        بديل مقترح (API)
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-brand-secondary" dir="ltr">PN: {part.partNumber}</div>
+                                  {part.compatibleParts && part.compatibleParts.length > 0 && (
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      بدائل: <span dir="ltr">{part.compatibleParts.join(', ')}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-brand-dark">
+                                {part.carMake && <span className="me-1">{part.carMake}</span>}
+                                {part.carModel && <span>{part.carModel}</span>}
+                                {!part.carMake && !part.carModel && '-'}
+                              </div>
+                              <div className="text-xs text-brand-secondary">
+                                {part.year && <span className="me-2">سنة: {part.year}</span>}
+                                {part.condition && <span>حالة: {part.condition === 'new' ? 'جديد' : 'مستعمل'}</span>}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-brand-secondary">
+                              ${part.price.toFixed(2)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${part.quantity > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                {part.quantity} في المخزن
+                              </span>
+                              
+                              <div className="mt-2">
+                                {quickEdit?.id === part.id && quickEdit?.field === 'location' ? (
+                                  <input
+                                    autoFocus
+                                    type="text"
+                                    className="text-xs border border-brand-primary rounded px-2 py-1 w-full max-w-[120px] focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                                    value={quickEdit.value}
+                                    onChange={(e) => setQuickEdit({ ...quickEdit, value: e.target.value })}
+                                    onBlur={() => handleQuickSave(part.id, 'location', quickEdit.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') handleQuickSave(part.id, 'location', quickEdit.value);
+                                      if (e.key === 'Escape') setQuickEdit(null);
+                                      if (e.key === 'ArrowDown') {
+                                        e.preventDefault();
+                                        handleQuickSave(part.id, 'location', quickEdit.value, false);
+                                        setQuickEdit({ id: part.id, field: 'shelf', value: part.shelf || '' });
+                                      }
+                                      if (e.key === 'ArrowUp') {
+                                        e.preventDefault();
+                                        handleQuickSave(part.id, 'location', quickEdit.value, false);
+                                        if (index > 0) {
+                                          setQuickEdit({ id: array[index - 1].id, field: 'shelf', value: array[index - 1].shelf || '' });
+                                        } else {
+                                          setQuickEdit(null);
+                                        }
+                                      }
+                                    }}
+                                  />
                                 ) : (
-                                  <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                    <ImageIcon className="h-5 w-5 text-gray-400" />
+                                  <div 
+                                    className="text-xs text-gray-500 cursor-pointer hover:text-brand-primary flex items-center gap-1 group"
+                                    onClick={() => setQuickEdit({ id: part.id, field: 'location', value: part.location || '' })}
+                                  >
+                                    الموقع: {part.location || <span className="text-gray-400 italic">إضافة موقع...</span>}
+                                    <Edit2 className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                                   </div>
                                 )}
                               </div>
-                              <div className="ms-4">
-                                <div className="text-sm font-medium text-brand-dark">{part.partName}</div>
-                                <div className="text-sm text-brand-secondary" dir="ltr">PN: {part.partNumber}</div>
+
+                              <div className="mt-1">
+                                {quickEdit?.id === part.id && quickEdit?.field === 'shelf' ? (
+                                  <input
+                                    autoFocus
+                                    type="text"
+                                    className="text-xs border border-brand-primary rounded px-2 py-1 w-full max-w-[120px] focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                                    value={quickEdit.value}
+                                    onChange={(e) => setQuickEdit({ ...quickEdit, value: e.target.value })}
+                                    onBlur={() => handleQuickSave(part.id, 'shelf', quickEdit.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') handleQuickSave(part.id, 'shelf', quickEdit.value);
+                                      if (e.key === 'Escape') setQuickEdit(null);
+                                      if (e.key === 'ArrowDown') {
+                                        e.preventDefault();
+                                        handleQuickSave(part.id, 'shelf', quickEdit.value, false);
+                                        if (index < array.length - 1) {
+                                          setQuickEdit({ id: array[index + 1].id, field: 'location', value: array[index + 1].location || '' });
+                                        } else {
+                                          setQuickEdit(null);
+                                        }
+                                      }
+                                      if (e.key === 'ArrowUp') {
+                                        e.preventDefault();
+                                        handleQuickSave(part.id, 'shelf', quickEdit.value, false);
+                                        setQuickEdit({ id: part.id, field: 'location', value: part.location || '' });
+                                      }
+                                    }}
+                                  />
+                                ) : (
+                                  <div 
+                                    className="text-xs text-gray-500 cursor-pointer hover:text-brand-primary flex items-center gap-1 group"
+                                    onClick={() => setQuickEdit({ id: part.id, field: 'shelf', value: part.shelf || '' })}
+                                  >
+                                    الرف: {part.shelf || <span className="text-gray-400 italic">إضافة رف...</span>}
+                                    <Edit2 className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-brand-dark">
-                              {part.carMake && <span className="me-1">{part.carMake}</span>}
-                              {part.carModel && <span>{part.carModel}</span>}
-                              {!part.carMake && !part.carModel && '-'}
-                            </div>
-                            <div className="text-xs text-brand-secondary">
-                              {part.year && <span className="me-2">سنة: {part.year}</span>}
-                              {part.condition && <span>حالة: {part.condition === 'new' ? 'جديد' : 'مستعمل'}</span>}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-brand-secondary">
-                            ${part.price.toFixed(2)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${part.quantity > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                              {part.quantity} في المخزن
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
                             <button onClick={() => setEditingPart(part)} className="text-brand-primary hover:text-brand-primary-hover me-2 p-2 min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-lg hover:bg-brand-primary/10 transition-colors">
                               <Edit2 className="h-5 w-5" />
                             </button>
@@ -896,9 +1202,10 @@ export function ShopDashboard() {
                               <Trash2 className="h-5 w-5" />
                             </button>
                           </td>
-                        </tr>
-                      ))
-                    )}
+                          </tr>
+                          );
+                        })
+                      )}
                   </tbody>
                 </table>
               </div>

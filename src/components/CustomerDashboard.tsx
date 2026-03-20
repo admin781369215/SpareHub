@@ -429,7 +429,16 @@ export function CustomerDashboard() {
                     filterCarMake === cat.name ? 'bg-brand-primary\/10 border-brand-primary' : 'bg-white border-brand-border'
                   }`}>
                     {cat.logo ? (
-                      <img src={cat.logo} alt={cat.name} className="w-8 h-8 object-contain" />
+                      <img 
+                        src={cat.logo} 
+                        alt={cat.name} 
+                        className="w-8 h-8 object-contain" 
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                          (e.target as HTMLImageElement).parentElement!.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-gray-400"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>';
+                        }}
+                      />
                     ) : (
                       <Car className="w-6 h-6 text-gray-400" />
                     )}
@@ -454,6 +463,62 @@ export function CustomerDashboard() {
               </button>
             </div>
           </div>
+
+          {/* Mobile Deals for you */}
+          {!hasSearched && parts.length > 0 && (
+            <div className="md:hidden bg-white pt-2 pb-6">
+              <div className="px-4 flex justify-between items-center mb-3">
+                <h2 className="text-lg font-bold text-brand-dark">عروض لك</h2>
+                <button className="text-sm text-brand-primary font-medium">عرض الكل</button>
+              </div>
+              <div className="flex overflow-x-auto hide-scrollbar gap-4 px-4 pb-2">
+                {parts.slice(0, 5).map((part) => {
+                  const isSaved = savedParts.some(sp => sp.partId === part.id);
+                  return (
+                    <div key={`deal-${part.id}`} className="w-[160px] flex-shrink-0">
+                      <ProductGridItem
+                        part={part}
+                        isSaved={isSaved}
+                        onToggleSave={toggleSavePart}
+                        onClick={(p) => {
+                          setSelectedImagePart(p);
+                          setCurrentImageIndex(0);
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Mobile Recent Views */}
+          {!hasSearched && parts.length > 3 && (
+            <div className="md:hidden bg-white pt-2 pb-6 border-t border-gray-100">
+              <div className="px-4 flex justify-between items-center mb-3">
+                <h2 className="text-lg font-bold text-brand-dark">شوهد مؤخراً</h2>
+                <button className="text-sm text-brand-primary font-medium">عرض الكل</button>
+              </div>
+              <div className="flex overflow-x-auto hide-scrollbar gap-4 px-4 pb-2">
+                {parts.slice(3, 8).map((part) => {
+                  const isSaved = savedParts.some(sp => sp.partId === part.id);
+                  return (
+                    <div key={`recent-${part.id}`} className="w-[160px] flex-shrink-0">
+                      <ProductGridItem
+                        part={part}
+                        isSaved={isSaved}
+                        onToggleSave={toggleSavePart}
+                        onClick={(p) => {
+                          setSelectedImagePart(p);
+                          setCurrentImageIndex(0);
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Desktop Home Layout (Only when not searched) */}
           {!hasSearched && (
@@ -507,7 +572,20 @@ export function CustomerDashboard() {
                     {categories.slice(0, 4).map((cat, idx) => (
                       <div key={idx} onClick={() => { setFilterCarMake(cat.name); handleSearch(new Event('submit') as any); }} className="bg-white rounded-xl p-4 border border-brand-border shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col items-center gap-3">
                         <div className="w-16 h-16 bg-brand-bg rounded-full flex items-center justify-center">
-                          {cat.logo ? <img src={cat.logo} alt={cat.name} className="w-10 h-10 object-contain" /> : <Car className="w-8 h-8 text-brand-secondary" />}
+                          {cat.logo ? (
+                            <img 
+                              src={cat.logo} 
+                              alt={cat.name} 
+                              className="w-10 h-10 object-contain" 
+                              referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                                (e.target as HTMLImageElement).parentElement!.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8 text-brand-secondary"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>';
+                              }}
+                            />
+                          ) : (
+                            <Car className="w-8 h-8 text-brand-secondary" />
+                          )}
                         </div>
                         <span className="font-bold text-brand-dark">{cat.name}</span>
                       </div>
@@ -648,7 +726,7 @@ export function CustomerDashboard() {
             <div className="w-full md:w-3/4">
               {parts.length > 0 ? (
                 <div>
-                  <div className="flex justify-between items-center mb-4">
+                  <div className="flex justify-between items-center mb-4 px-4 md:px-0">
                     <h2 className="text-xl font-bold text-brand-dark">
                       {hasSearched ? `${parts.length} نتيجة` : 'أحدث القطع المضافة'}
                     </h2>
@@ -661,28 +739,30 @@ export function CustomerDashboard() {
                       تصفية
                     </button>
                   </div>
-                  
-                  {/* Mobile Vertical List */}
-                  <div className="flex flex-col gap-3 md:hidden">
-                    {parts.map((part) => {
-                      const isSaved = savedParts.some(sp => sp.partId === part.id);
-                      return (
-                        <ProductListItem
-                          key={part.id}
-                          part={part}
-                          isSaved={isSaved}
-                          onToggleSave={toggleSavePart}
-                          onImageClick={(p) => {
-                            setSelectedImagePart(p);
-                            setCurrentImageIndex(0);
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
 
-                  {/* Desktop Grid Layout */}
-                  <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {/* Mobile Explore More Options */}
+                  {!hasSearched && (
+                    <div className="md:hidden mb-4">
+                      <h3 className="text-sm font-bold text-gray-700 px-4 mb-2">استكشف المزيد من الخيارات: الماركات</h3>
+                      <div className="flex overflow-x-auto hide-scrollbar gap-2 px-4 pb-2">
+                        {categories.map((cat, idx) => (
+                          <button
+                            key={`explore-${idx}`}
+                            onClick={() => {
+                              setFilterCarMake(cat.name);
+                              handleSearch(new Event('submit') as any);
+                            }}
+                            className="whitespace-nowrap bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-medium px-4 py-2 rounded-full border border-gray-200 transition-colors"
+                          >
+                            {cat.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Unified Grid Layout for Mobile and Desktop */}
+                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6 px-4 md:px-0">
                     {parts.map((part) => {
                       const isSaved = savedParts.some(sp => sp.partId === part.id);
                       return (
@@ -731,27 +811,8 @@ export function CustomerDashboard() {
                     <h3 className="mt-2 text-lg font-bold text-brand-dark">قطع مشابهة قد تهمك</h3>
                   </div>
                   
-                  {/* Mobile Vertical List */}
-                  <div className="flex flex-col gap-3 md:hidden">
-                    {similarParts.map((part) => {
-                      const isSaved = savedParts.some(sp => sp.partId === part.id);
-                      return (
-                        <ProductListItem
-                          key={part.id}
-                          part={part}
-                          isSaved={isSaved}
-                          onToggleSave={toggleSavePart}
-                          onImageClick={(p) => {
-                            setSelectedImagePart(p);
-                            setCurrentImageIndex(0);
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-
-                  {/* Desktop Grid Layout */}
-                  <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {/* Unified Grid Layout for Mobile and Desktop */}
+                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6 px-4 md:px-0">
                     {similarParts.map((part) => {
                       const isSaved = savedParts.some(sp => sp.partId === part.id);
                       return (

@@ -82,7 +82,7 @@ service cloud.firestore {
     }
 
     function isValidPart(data) {
-      return hasOnlyAllowedFields(['shopId', 'partNumber', 'partName', 'carMake', 'carModel', 'year', 'manufacturer', 'condition', 'price', 'quantity', 'imageUrls', 'createdAt']) &&
+      return hasOnlyAllowedFields(['shopId', 'partNumber', 'partName', 'carMake', 'carModel', 'year', 'manufacturer', 'condition', 'price', 'quantity', 'imageUrls', 'location', 'shelf', 'compatibleParts', 'createdAt']) &&
              data.shopId is string && data.shopId.size() > 0 && data.shopId.size() < 100 &&
              data.partNumber is string && data.partNumber.size() > 0 && data.partNumber.size() < 100 &&
              data.partName is string && data.partName.size() > 0 && data.partName.size() < 200 &&
@@ -94,6 +94,9 @@ service cloud.firestore {
              data.price is number && data.price >= 0 &&
              data.quantity is number && data.quantity >= 0 &&
              (!('imageUrls' in data) || (data.imageUrls is list && data.imageUrls.size() <= 5)) &&
+             (!('location' in data) || (data.location is string && data.location.size() < 200)) &&
+             (!('shelf' in data) || (data.shelf is string && data.shelf.size() < 100)) &&
+             (!('compatibleParts' in data) || (data.compatibleParts is list && data.compatibleParts.size() <= 20)) &&
              data.createdAt is string;
     }
 
@@ -164,7 +167,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isValidShop(request.resource.data) && 
                     (request.resource.data.ownerUid == request.auth.uid || isAdmin());
       allow update: if isAuthenticated() && isValidShop(request.resource.data) && 
-                    ((resource.data.ownerUid == request.auth.uid && request.resource.data.ownerUid == resource.data.ownerUid && !('status' in request.resource.data.diff(resource.data).affectedKeys()) && !('subscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) && !('subscriptionEndDate' in request.resource.data.diff(resource.data).affectedKeys())) || 
+                    ((resource.data.ownerUid == request.auth.uid && request.resource.data.ownerUid == resource.data.ownerUid && (!('status' in request.resource.data.diff(resource.data).affectedKeys()) || request.auth.token.email == 'a43995642@gmail.com') && (!('subscriptionStatus' in request.resource.data.diff(resource.data).affectedKeys()) || request.auth.token.email == 'a43995642@gmail.com') && (!('subscriptionEndDate' in request.resource.data.diff(resource.data).affectedKeys()) || request.auth.token.email == 'a43995642@gmail.com')) || 
                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'reviewCount'])) ||
                      isAdmin());
       allow delete: if isAuthenticated() && (resource.data.ownerUid == request.auth.uid || isAdmin());

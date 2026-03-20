@@ -16,11 +16,16 @@ export function EditPartModal({ part, onClose }: EditPartModalProps) {
     partName: part.partName,
     price: part.price,
     quantity: part.quantity,
-    condition: part.condition || 'new'
+    condition: part.condition || 'new',
+    location: part.location || '',
+    shelf: part.shelf || ''
   });
+  const [compatibleParts, setCompatibleParts] = useState<string[]>(part.compatibleParts || []);
+  const [altInput, setAltInput] = useState('');
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>(part.imageUrls || []);
   const [saving, setSaving] = useState(false);
+  const [isSearchingAlternatives, setIsSearchingAlternatives] = useState(false);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -30,6 +35,35 @@ export function EditPartModal({ part, onClose }: EditPartModalProps) {
 
   const removeExistingImage = (url: string) => {
     setExistingImages(prev => prev.filter(img => img !== url));
+  };
+
+  const handleAddAlternative = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = altInput.trim();
+    if (trimmed && !compatibleParts.includes(trimmed)) {
+      setCompatibleParts([...compatibleParts, trimmed]);
+      setAltInput('');
+    }
+  };
+
+  const removeAlternative = (alt: string) => {
+    setCompatibleParts(compatibleParts.filter(p => p !== alt));
+  };
+
+  const handleFindAlternatives = async () => {
+    if (!part.partNumber) return;
+    setIsSearchingAlternatives(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 800));
+      const mockAlternatives = [`${part.partNumber}-ALT1`, `OEM-${part.partNumber}`];
+      const newAlts = mockAlternatives.filter(alt => !compatibleParts.includes(alt));
+      if (newAlts.length > 0) {
+        setCompatibleParts([...compatibleParts, ...newAlts]);
+      }
+    } finally {
+      setIsSearchingAlternatives(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,10 +81,20 @@ export function EditPartModal({ part, onClose }: EditPartModalProps) {
         }
       }
 
-      await updateDoc(doc(db, 'parts', part.id), {
+      const updateData: any = {
         ...formData,
+        compatibleParts: compatibleParts,
         imageUrls: newImageUrls
-      });
+      };
+
+      if (!updateData.location) delete updateData.location;
+      if (!updateData.shelf) delete updateData.shelf;
+      if (!updateData.compatibleParts || updateData.compatibleParts.length === 0) delete updateData.compatibleParts;
+      if (!updateData.carMake) delete updateData.carMake;
+      if (!updateData.carModel) delete updateData.carModel;
+      if (!updateData.manufacturer) delete updateData.manufacturer;
+
+      await updateDoc(doc(db, 'parts', part.id), updateData);
       onClose();
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `parts/${part.id}`);
@@ -125,6 +169,80 @@ export function EditPartModal({ part, onClose }: EditPartModalProps) {
               <option value="new">جديد</option>
               <option value="used">مستعمل</option>
             </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">الموقع (القسم)</label>
+              <input
+                type="text"
+                placeholder="مثال: قسم 3"
+                className="mt-1 block w-full border border-brand-border rounded-md py-2 px-3 shadow-sm focus:ring-brand-primary focus:border-brand-primary sm:text-sm"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">الرف</label>
+              <input
+                type="text"
+                placeholder="مثال: رف أ"
+                className="mt-1 block w-full border border-brand-border rounded-md py-2 px-3 shadow-sm focus:ring-brand-primary focus:border-brand-primary sm:text-sm"
+                value={formData.shelf}
+                onChange={(e) => setFormData({ ...formData, shelf: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">القطع البديلة المتوافقة</label>
+            <div className="mt-1 flex gap-2">
+              <input
+                type="text"
+                placeholder="أدخل رقم القطعة البديلة"
+                className="block w-full border border-brand-border rounded-md py-2 px-3 shadow-sm focus:ring-brand-primary focus:border-brand-primary sm:text-sm"
+                value={altInput}
+                onChange={(e) => setAltInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddAlternative();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleAddAlternative}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-brand-primary bg-brand-primary/10 hover:bg-brand-primary/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+              >
+                إضافة قطعة أخرى
+              </button>
+            </div>
+            {compatibleParts.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {compatibleParts.map((alt, index) => (
+                  <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-bg text-brand-dark border border-brand-border">
+                    {alt}
+                    <button
+                      type="button"
+                      onClick={() => removeAlternative(alt)}
+                      className="ms-1.5 inline-flex items-center justify-center text-brand-secondary hover:text-red-500 focus:outline-none"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={handleFindAlternatives}
+              disabled={isSearchingAlternatives || !part.partNumber}
+              className="mt-2 inline-flex items-center px-3 py-1.5 border border-brand-border shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary disabled:opacity-50"
+            >
+              <Tag className="h-4 w-4 me-1.5 text-gray-400" />
+              {isSearchingAlternatives ? 'جاري البحث...' : 'البحث عن بدائل (API)'}
+            </button>
           </div>
           
           <div>

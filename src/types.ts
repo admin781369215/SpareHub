@@ -38,6 +38,9 @@ export interface Part {
   price: number;
   quantity: number;
   imageUrls?: string[];
+  location?: string;
+  shelf?: string;
+  compatibleParts?: string[];
   createdAt: string;
 }
 

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, User as FirebaseUser, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, query, collection, where, getDocs, addDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { User, Role } from './types';
 import { handleFirestoreError, OperationType } from './utils/firestore-errors';
@@ -35,18 +35,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               data.role = 'admin';
               await setDoc(userDocRef, data, { merge: true });
             }
+            
+            // Auto-approve shop for specific test user
+            if (firebaseUser.email === 'a43995642@gmail.com') {
+              if (data.role !== 'shop_owner') {
+                data.role = 'shop_owner';
+                await setDoc(userDocRef, data, { merge: true });
+              }
+              
+              try {
+                const qShop = query(collection(db, 'shops'), where('ownerUid', '==', firebaseUser.uid));
+                const shopSnap = await getDocs(qShop);
+                if (shopSnap.empty) {
+                  await addDoc(collection(db, 'shops'), {
+                    ownerUid: firebaseUser.uid,
+                    name: 'متجر التجربة',
+                    city: 'الرياض',
+                    phone: '0500000000',
+                    rating: 5,
+                    reviewCount: 0,
+                    status: 'approved',
+                    subscriptionStatus: 'active',
+                    subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                    createdAt: new Date().toISOString()
+                  });
+                } else {
+                  const shopDoc = shopSnap.docs[0];
+                  if (shopDoc.data().status !== 'approved') {
+                    await setDoc(doc(db, 'shops', shopDoc.id), { 
+                      status: 'approved',
+                      subscriptionStatus: 'active',
+                      subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+                    }, { merge: true });
+                  }
+                }
+              } catch (err) {
+                console.error("Error auto-approving shop:", err);
+              }
+            }
+            
             setDbUser(data);
           } else {
             // Create new user document
+            let initialRole: Role = 'customer';
+            if (firebaseUser.email === '781369216a@gmail.com') initialRole = 'admin';
+            if (firebaseUser.email === 'a43995642@gmail.com') initialRole = 'shop_owner';
+            
             const newUser: User = {
               uid: firebaseUser.uid,
               email: firebaseUser.email || '',
               displayName: firebaseUser.displayName || '',
-              role: firebaseUser.email === '781369216a@gmail.com' ? 'admin' : 'customer',
+              role: initialRole,
               createdAt: new Date().toISOString()
             };
             await setDoc(userDocRef, newUser);
             setDbUser(newUser);
+            
+            if (firebaseUser.email === 'a43995642@gmail.com') {
+              try {
+                await addDoc(collection(db, 'shops'), {
+                  ownerUid: firebaseUser.uid,
+                  name: 'متجر التجربة',
+                  city: 'الرياض',
+                  phone: '0500000000',
+                  rating: 5,
+                  reviewCount: 0,
+                  status: 'approved',
+                  subscriptionStatus: 'active',
+                  subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                  createdAt: new Date().toISOString()
+                });
+              } catch (err) {
+                console.error("Error auto-creating shop:", err);
+              }
+            }
           }
         } catch (error) {
           handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);

@@ -25,10 +25,19 @@ export function ProductListItem({ part, isSaved, onToggleSave, onImageClick }: P
         {/* Image Section (Right in RTL) */}
         <div className="relative w-28 h-28 sm:w-32 sm:h-32 flex-shrink-0 bg-brand-bg rounded-lg overflow-hidden">
           {part.imageUrls && part.imageUrls.length > 0 ? (
-            <img src={part.imageUrls[0]} alt={part.partName} className="w-full h-full object-cover" />
+            <img src={part.imageUrls[0]} alt={part.partName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           ) : carLogo ? (
             <div className="w-full h-full flex items-center justify-center bg-white p-4">
-               <img src={carLogo} alt={part.carMake} className="w-full h-full object-contain opacity-60" />
+               <img 
+                 src={carLogo} 
+                 alt={part.carMake} 
+                 className="w-full h-full object-contain opacity-60" 
+                 referrerPolicy="no-referrer" 
+                 onError={(e) => {
+                   (e.target as HTMLImageElement).style.display = 'none';
+                   (e.target as HTMLImageElement).parentElement!.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8 opacity-50 text-gray-300"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>';
+                 }}
+               />
             </div>
           ) : (
             <div className="w-full h-full flex items-center justify-center text-gray-300">
@@ -68,7 +77,16 @@ export function ProductListItem({ part, isSaved, onToggleSave, onImageClick }: P
                {[part.carMake, part.carModel, part.year].filter(Boolean).length > 0 && (
                  <span className="flex items-center gap-1.5 bg-brand-bg px-2 py-1 rounded-md border border-brand-border">
                    {carLogo ? (
-                     <img src={carLogo} alt={part.carMake} className="w-4 h-4 object-contain" />
+                     <img 
+                       src={carLogo} 
+                       alt={part.carMake} 
+                       className="w-4 h-4 object-contain" 
+                       referrerPolicy="no-referrer"
+                       onError={(e) => {
+                         (e.target as HTMLImageElement).style.display = 'none';
+                         (e.target as HTMLImageElement).parentElement!.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 text-gray-400"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>';
+                       }}
+                     />
                    ) : (
                      <Car className="w-3.5 h-3.5 text-gray-400" />
                    )}

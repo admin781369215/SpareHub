@@ -4,16 +4,16 @@ export const CAR_MAKES = [
 ];
 
 export const CAR_LOGOS: Record<string, string> = {
-  'تويوتا': 'https://logo.clearbit.com/toyota.com',
-  'هوندا': 'https://logo.clearbit.com/honda.com',
-  'نيسان': 'https://logo.clearbit.com/nissanusa.com',
-  'فورد': 'https://logo.clearbit.com/ford.com',
-  'شيفروليه': 'https://logo.clearbit.com/chevrolet.com',
-  'هيونداي': 'https://logo.clearbit.com/hyundai.com',
-  'كيا': 'https://logo.clearbit.com/kia.com',
-  'بي إم دبليو': 'https://logo.clearbit.com/bmw.com',
-  'مرسيدس': 'https://logo.clearbit.com/mercedes-benz.com',
-  'أودي': 'https://logo.clearbit.com/audi.com'
+  'تويوتا': 'https://icon.horse/icon/toyota.com',
+  'هوندا': 'https://icon.horse/icon/honda.com',
+  'نيسان': 'https://icon.horse/icon/nissan-global.com',
+  'فورد': 'https://icon.horse/icon/ford.com',
+  'شيفروليه': 'https://icon.horse/icon/chevrolet.com',
+  'هيونداي': 'https://icon.horse/icon/hyundai.com',
+  'كيا': 'https://icon.horse/icon/kia.com',
+  'بي إم دبليو': 'https://icon.horse/icon/bmw.com',
+  'مرسيدس': 'https://icon.horse/icon/mercedes-benz.com',
+  'أودي': 'https://icon.horse/icon/audi.com'
 };
 
 export const CAR_MODELS: Record<string, string[]> = {

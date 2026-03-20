@@ -4,7 +4,7 @@ import { Facebook, Twitter, Instagram, Youtube, MapPin, Phone, Mail } from 'luci
 
 export function Footer() {
   return (
-    <footer className="bg-brand-dark text-gray-300 pt-16 pb-8 border-t border-brand-border/20">
+    <footer className="hidden md:block bg-brand-dark text-gray-300 pt-16 pb-8 border-t border-brand-border/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           {/* About */}

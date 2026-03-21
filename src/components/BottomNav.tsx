@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, ClipboardList, ShoppingCart, User, Bell, LogOut, Store, X, Settings, Heart } from 'lucide-react';
+import { Home, ClipboardList, ShoppingCart, User, Bell, LogOut, Store, X, Settings, Heart, Info, FileText, Shield, Phone } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { collection, query, where, onSnapshot, updateDoc, doc } from 'firebase/firestore';
@@ -74,6 +74,30 @@ export function BottomNav() {
   };
 
   const isHidden = scrollDirection === 'down' && !isAtTop && !isAccountMenuOpen && !isNotificationsOpen;
+
+  const QuickLinks = () => (
+    <div className="mt-6 pt-6 border-t border-gray-100 text-right">
+      <h4 className="text-sm font-bold text-gray-900 mb-3 px-2">روابط سريعة</h4>
+      <div className="space-y-1">
+        <Link to="/about" onClick={() => setIsAccountMenuOpen(false)} className="flex items-center gap-3 p-3 min-h-[44px] rounded-xl hover:bg-gray-50 text-brand-dark transition-colors">
+          <Info className="w-5 h-5 text-brand-secondary" />
+          <span className="font-medium text-sm">من نحن</span>
+        </Link>
+        <Link to="/contact" onClick={() => setIsAccountMenuOpen(false)} className="flex items-center gap-3 p-3 min-h-[44px] rounded-xl hover:bg-gray-50 text-brand-dark transition-colors">
+          <Phone className="w-5 h-5 text-brand-secondary" />
+          <span className="font-medium text-sm">اتصل بنا</span>
+        </Link>
+        <Link to="/terms" onClick={() => setIsAccountMenuOpen(false)} className="flex items-center gap-3 p-3 min-h-[44px] rounded-xl hover:bg-gray-50 text-brand-dark transition-colors">
+          <FileText className="w-5 h-5 text-brand-secondary" />
+          <span className="font-medium text-sm">الشروط والأحكام</span>
+        </Link>
+        <Link to="/privacy" onClick={() => setIsAccountMenuOpen(false)} className="flex items-center gap-3 p-3 min-h-[44px] rounded-xl hover:bg-gray-50 text-brand-dark transition-colors">
+          <Shield className="w-5 h-5 text-brand-secondary" />
+          <span className="font-medium text-sm">سياسة الخصوصية</span>
+        </Link>
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -159,6 +183,7 @@ export function BottomNav() {
                   >
                     تسجيل الدخول / إنشاء حساب
                   </button>
+                  <QuickLinks />
                 </div>
               ) : isNotificationsOpen ? (
                 <div className="pb-4">
@@ -288,6 +313,7 @@ export function BottomNav() {
                       <span className="font-medium">تسجيل خروج</span>
                     </button>
                   </div>
+                  <QuickLinks />
                 </div>
               )}
             </div>

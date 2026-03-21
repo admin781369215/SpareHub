@@ -168,19 +168,54 @@ export function ProductDetailsModal({ part, isOpen, onClose, isSaved, onToggleSa
                       </div>
                     </div>
                     
-                    <div className="space-y-2 text-sm text-gray-600">
-                      {part.shop.address && (
-                        <div className="flex items-center gap-2">
-                          <MapPin className="w-4 h-4 text-brand-secondary" />
-                          <span>{part.shop.address}</span>
-                        </div>
-                      )}
-                      {part.shop.phone && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="w-4 h-4 text-brand-secondary" />
-                          <span dir="ltr">{part.shop.phone}</span>
-                        </div>
-                      )}
+                    <div className="space-y-3">
+                      <div className="space-y-2 text-sm text-gray-600">
+                        {(part.shop.location || part.shop.city) && (
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-brand-secondary" />
+                            <span>{part.shop.location || part.shop.city}</span>
+                          </div>
+                        )}
+                        {part.shop.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-4 h-4 text-brand-secondary" />
+                            <span dir="ltr">{part.shop.phone}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex gap-2 pt-2">
+                        {part.shop.phone && (
+                          <a 
+                            href={`tel:${part.shop.phone}`}
+                            className="flex-1 flex items-center justify-center gap-2 bg-green-50 text-green-700 hover:bg-green-100 py-2 rounded-lg font-bold text-sm transition-colors border border-green-100"
+                          >
+                            <Phone className="w-4 h-4" />
+                            اتصال
+                          </a>
+                        )}
+                        {(part.shop.latitude && part.shop.longitude) ? (
+                          <a 
+                            href={`https://maps.google.com/?q=${part.shop.latitude},${part.shop.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-700 hover:bg-blue-100 py-2 rounded-lg font-bold text-sm transition-colors border border-blue-100"
+                          >
+                            <MapPin className="w-4 h-4" />
+                            الخريطة
+                          </a>
+                        ) : (part.shop.location || part.shop.city) ? (
+                          <a 
+                            href={`https://maps.google.com/?q=${encodeURIComponent(part.shop.location || part.shop.city)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-700 hover:bg-blue-100 py-2 rounded-lg font-bold text-sm transition-colors border border-blue-100"
+                          >
+                            <MapPin className="w-4 h-4" />
+                            الخريطة
+                          </a>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 </div>

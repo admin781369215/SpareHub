@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, runTransaction } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { Shop, Review } from '../types';
-import { Star, X, MessageSquare, User } from 'lucide-react';
+import { Star, X, MessageSquare, User, Phone, MapPin } from 'lucide-react';
 
 interface ShopProfileModalProps {
   shop: Shop;
@@ -158,6 +158,39 @@ export function ShopProfileModal({ shop, isOpen, onClose, canReview = true }: Sh
                   <span className="text-brand-secondary text-sm">
                     ({shop.reviewCount || 0} تقييم)
                   </span>
+                </div>
+                
+                <div className="flex gap-2 mt-4">
+                  {shop.phone && (
+                    <a 
+                      href={`tel:${shop.phone}`}
+                      className="flex items-center justify-center gap-2 bg-green-50 text-green-700 hover:bg-green-100 px-4 py-2 rounded-lg font-bold text-sm transition-colors border border-green-100"
+                    >
+                      <Phone className="w-4 h-4" />
+                      اتصال
+                    </a>
+                  )}
+                  {(shop.latitude && shop.longitude) ? (
+                    <a 
+                      href={`https://maps.google.com/?q=${shop.latitude},${shop.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 bg-blue-50 text-blue-700 hover:bg-blue-100 px-4 py-2 rounded-lg font-bold text-sm transition-colors border border-blue-100"
+                    >
+                      <MapPin className="w-4 h-4" />
+                      الخريطة
+                    </a>
+                  ) : (shop.location || shop.city) ? (
+                    <a 
+                      href={`https://maps.google.com/?q=${encodeURIComponent(shop.location || shop.city)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 bg-blue-50 text-blue-700 hover:bg-blue-100 px-4 py-2 rounded-lg font-bold text-sm transition-colors border border-blue-100"
+                    >
+                      <MapPin className="w-4 h-4" />
+                      الخريطة
+                    </a>
+                  ) : null}
                 </div>
               </div>
               <button

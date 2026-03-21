@@ -8,6 +8,7 @@ import { handleFirestoreError, OperationType } from '../utils/firestore-errors';
 import { useAuth } from '../AuthContext';
 import { ProductListItem } from './ProductListItem';
 import { ProductGridItem } from './ProductGridItem';
+import { ProductDetailsModal } from './ProductDetailsModal';
 import { ShopProfileModal } from './ShopProfileModal';
 import { CAR_MAKES, CAR_MODELS, getYears, CAR_LOGOS } from '../utils/carData';
 
@@ -979,49 +980,15 @@ export function CustomerDashboard() {
         </div>
       )}
 
-      {/* Image Modal */}
-      {selectedImagePart && selectedImagePart.imageUrls && (
-        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-brand-secondary bg-opacity-90 transition-opacity" aria-hidden="true" onClick={() => setSelectedImagePart(null)}></div>
-
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-            <div className="inline-block align-bottom bg-transparent rounded-lg text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl w-full relative">
-              <button
-                type="button"
-                className="absolute top-4 right-4 text-white hover:text-gray-300 z-10 bg-black bg-opacity-50 rounded-full p-2 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                onClick={() => setSelectedImagePart(null)}
-              >
-                <X className="h-6 w-6" />
-              </button>
-
-              <div className="relative w-full h-[70vh] flex items-center justify-center">
-                <img 
-                  src={selectedImagePart.imageUrls[currentImageIndex]} 
-                  alt={`${selectedImagePart.partName} - Image ${currentImageIndex + 1}`}
-                  className="max-w-full max-h-full object-contain"
-                />
-              </div>
-
-              {selectedImagePart.imageUrls.length > 1 && (
-                <div className="flex justify-center mt-4 gap-2 overflow-x-auto py-2 px-4">
-                  {selectedImagePart.imageUrls.map((url, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentImageIndex(idx)}
-                      className={`flex-shrink-0 h-16 w-16 rounded-md overflow-hidden border-2 ${
-                        currentImageIndex === idx ? 'border-brand-primary' : 'border-transparent opacity-60 hover:opacity-100'
-                      }`}
-                    >
-                      <img src={url} alt={`Thumbnail ${idx + 1}`} className="h-full w-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+      {/* Product Details Modal */}
+      {selectedImagePart && (
+        <ProductDetailsModal
+          part={selectedImagePart}
+          isOpen={!!selectedImagePart}
+          onClose={() => setSelectedImagePart(null)}
+          isSaved={savedParts.some(sp => sp.partId === selectedImagePart.id)}
+          onToggleSave={toggleSavePart}
+        />
       )}
 
       {/* Request Modal */}

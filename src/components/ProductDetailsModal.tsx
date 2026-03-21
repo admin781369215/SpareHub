@@ -3,6 +3,7 @@ import { Part, Shop } from '../types';
 import { X, Heart, ShoppingBag, Star, MapPin, Phone, Shield, ChevronRight, ChevronLeft, Info, Package } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { CAR_LOGOS } from '../utils/carData';
+import { MapModal } from './MapModal';
 
 interface ProductDetailsModalProps {
   part: Part & { shop?: Shop };
@@ -14,12 +15,14 @@ interface ProductDetailsModalProps {
 
 export function ProductDetailsModal({ part, isOpen, onClose, isSaved, onToggleSave }: ProductDetailsModalProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isMapOpen, setIsMapOpen] = useState(false);
   const { addToCart } = useCart();
   const carLogo = part.carMake ? CAR_LOGOS[part.carMake] : null;
 
   if (!isOpen) return null;
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm">
       <div 
         className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col md:flex-row relative animate-in fade-in zoom-in-95 duration-200"
@@ -194,28 +197,33 @@ export function ProductDetailsModal({ part, isOpen, onClose, isSaved, onToggleSa
                             اتصال
                           </a>
                         )}
-                        {(part.shop.latitude && part.shop.longitude) ? (
-                          <a 
-                            href={`https://maps.google.com/?q=${part.shop.latitude},${part.shop.longitude}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        {(part.shop.latitude && part.shop.longitude) || part.shop.location || part.shop.city ? (
+                          <button 
+                            onClick={(e) => { e.preventDefault(); setIsMapOpen(true); }}
                             className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-700 hover:bg-blue-100 py-2 rounded-lg font-bold text-sm transition-colors border border-blue-100"
                           >
                             <MapPin className="w-4 h-4" />
                             الخريطة
-                          </a>
-                        ) : (part.shop.location || part.shop.city) ? (
-                          <a 
-                            href={`https://maps.google.com/?q=${encodeURIComponent(part.shop.location || part.shop.city)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-700 hover:bg-blue-100 py-2 rounded-lg font-bold text-sm transition-colors border border-blue-100"
-                          >
-                            <MapPin className="w-4 h-4" />
-                            الخريطة
-                          </a>
+                          </button>
                         ) : null}
                       </div>
+                      
+                      {/* Shop Images */}
+                      {part.shop.imageUrls && part.shop.imageUrls.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <h4 className="text-sm font-bold text-gray-700 mb-3">صور المتجر</h4>
+                          <div className="flex gap-2 overflow-x-auto pb-2 snap-x">
+                            {part.shop.imageUrls.map((url, idx) => (
+                              <img 
+                                key={idx} 
+                                src={url} 
+                                alt={`صورة المتجر ${idx + 1}`} 
+                                className="h-24 w-32 object-cover rounded-lg flex-shrink-0 snap-center border border-gray-200"
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -239,5 +247,17 @@ export function ProductDetailsModal({ part, isOpen, onClose, isSaved, onToggleSa
         </div>
       </div>
     </div>
+    
+    {part.shop && (
+      <MapModal 
+        isOpen={isMapOpen}
+        onClose={() => setIsMapOpen(false)}
+        shopName={part.shop.name}
+        latitude={part.shop.latitude}
+        longitude={part.shop.longitude}
+        location={part.shop.location || part.shop.city}
+      />
+    )}
+    </>
   );
 }

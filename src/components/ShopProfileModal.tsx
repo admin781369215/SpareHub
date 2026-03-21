@@ -3,6 +3,7 @@ import { collection, query, where, getDocs, addDoc, updateDoc, doc, runTransacti
 import { db, auth } from '../firebase';
 import { Shop, Review } from '../types';
 import { Star, X, MessageSquare, User, Phone, MapPin } from 'lucide-react';
+import { MapModal } from './MapModal';
 
 interface ShopProfileModalProps {
   shop: Shop;
@@ -14,6 +15,7 @@ interface ShopProfileModalProps {
 export function ShopProfileModal({ shop, isOpen, onClose, canReview = true }: ShopProfileModalProps) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMapOpen, setIsMapOpen] = useState(false);
   
   // New review form state
   const [rating, setRating] = useState(5);
@@ -120,6 +122,7 @@ export function ShopProfileModal({ shop, isOpen, onClose, canReview = true }: Sh
   if (!isOpen) return null;
 
   return (
+    <>
     <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
       <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div className="fixed inset-0 bg-brand-secondary bg-opacity-75 transition-opacity" aria-hidden="true" onClick={onClose}></div>
@@ -170,28 +173,33 @@ export function ShopProfileModal({ shop, isOpen, onClose, canReview = true }: Sh
                       اتصال
                     </a>
                   )}
-                  {(shop.latitude && shop.longitude) ? (
-                    <a 
-                      href={`https://maps.google.com/?q=${shop.latitude},${shop.longitude}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                  {(shop.latitude && shop.longitude) || shop.location || shop.city ? (
+                    <button 
+                      onClick={(e) => { e.preventDefault(); setIsMapOpen(true); }}
                       className="flex items-center justify-center gap-2 bg-blue-50 text-blue-700 hover:bg-blue-100 px-4 py-2 rounded-lg font-bold text-sm transition-colors border border-blue-100"
                     >
                       <MapPin className="w-4 h-4" />
                       الخريطة
-                    </a>
-                  ) : (shop.location || shop.city) ? (
-                    <a 
-                      href={`https://maps.google.com/?q=${encodeURIComponent(shop.location || shop.city)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 bg-blue-50 text-blue-700 hover:bg-blue-100 px-4 py-2 rounded-lg font-bold text-sm transition-colors border border-blue-100"
-                    >
-                      <MapPin className="w-4 h-4" />
-                      الخريطة
-                    </a>
+                    </button>
                   ) : null}
                 </div>
+                
+                {/* Shop Images */}
+                {shop.imageUrls && shop.imageUrls.length > 0 && (
+                  <div className="mt-6 pt-4 border-t border-gray-100">
+                    <h4 className="text-sm font-bold text-gray-700 mb-3">صور المتجر</h4>
+                    <div className="flex gap-3 overflow-x-auto pb-2 snap-x">
+                      {shop.imageUrls.map((url, idx) => (
+                        <img 
+                          key={idx} 
+                          src={url} 
+                          alt={`صورة المتجر ${idx + 1}`} 
+                          className="h-32 w-48 object-cover rounded-xl flex-shrink-0 snap-center border border-gray-200 shadow-sm"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <button
                 type="button"
@@ -292,5 +300,15 @@ export function ShopProfileModal({ shop, isOpen, onClose, canReview = true }: Sh
         </div>
       </div>
     </div>
+    
+    <MapModal 
+      isOpen={isMapOpen}
+      onClose={() => setIsMapOpen(false)}
+      shopName={shop.name}
+      latitude={shop.latitude}
+      longitude={shop.longitude}
+      location={shop.location || shop.city}
+    />
+    </>
   );
 }

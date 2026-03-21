@@ -17,6 +17,7 @@ export interface Shop {
   location?: string;
   latitude?: number;
   longitude?: number;
+  imageUrls?: string[];
   rating?: number;
   reviewCount?: number;
   status?: 'pending' | 'approved' | 'rejected';

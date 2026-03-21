@@ -119,6 +119,8 @@ export function ShopDashboard() {
   const [altInput, setAltInput] = useState('');
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [shopImageFiles, setShopImageFiles] = useState<File[]>([]);
+  const [uploadingShopImages, setUploadingShopImages] = useState(false);
   const [isFindingAlternatives, setIsFindingAlternatives] = useState(false);
 
   const handleAddAlternative = () => {
@@ -374,6 +376,35 @@ export function ShopDashboard() {
 
   const removeImage = (index: number) => {
     setImageFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleShopImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      const currentShopImagesCount = shop?.imageUrls?.length || 0;
+      if (shopImageFiles.length + filesArray.length + currentShopImagesCount > 5) {
+        alert('يمكنك إضافة 5 صور كحد أقصى للمتجر');
+        return;
+      }
+      setShopImageFiles(prev => [...prev, ...filesArray]);
+    }
+  };
+
+  const removeShopImageFile = (index: number) => {
+    setShopImageFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingShopImage = async (urlToRemove: string) => {
+    if (!shop) return;
+    try {
+      const updatedUrls = (shop.imageUrls || []).filter(url => url !== urlToRemove);
+      await updateDoc(doc(db, 'shops', shop.id), {
+        imageUrls: updatedUrls
+      });
+      setShop(prev => prev ? { ...prev, imageUrls: updatedUrls } : null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'shops');
+    }
   };
 
   const [partToDelete, setPartToDelete] = useState<string | null>(null);
@@ -1379,18 +1410,38 @@ export function ShopDashboard() {
               <form onSubmit={async (e) => {
               e.preventDefault();
               if (!shop) return;
+              setUploadingShopImages(true);
               try {
+                const newImageUrls: string[] = [];
+                for (const file of shopImageFiles) {
+                  const fileRef = ref(storage, `shops/${shop.id}/${Date.now()}_${file.name}`);
+                  const uploadTask = await uploadBytesResumable(fileRef, file);
+                  const downloadURL = await getDownloadURL(uploadTask.ref);
+                  newImageUrls.push(downloadURL);
+                }
+
+                const updatedImageUrls = [...(shop.imageUrls || []), ...newImageUrls];
+
                 await updateDoc(doc(db, 'shops', shop.id), {
                   name: shop.name,
                   phone: shop.phone,
                   city: shop.city,
                   location: shop.location || '',
                   latitude: shop.latitude || null,
-                  longitude: shop.longitude || null
+                  longitude: shop.longitude || null,
+                  ...(updatedImageUrls.length > 0 ? { imageUrls: updatedImageUrls } : {})
                 });
+                
+                if (newImageUrls.length > 0) {
+                  setShop(prev => prev ? { ...prev, imageUrls: updatedImageUrls } : null);
+                  setShopImageFiles([]);
+                }
+                
                 alert('تم تحديث بيانات المتجر بنجاح');
               } catch (error) {
                 handleFirestoreError(error, OperationType.UPDATE, 'shops');
+              } finally {
+                setUploadingShopImages(false);
               }
             }} className="space-y-6">
               <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
@@ -1511,14 +1562,86 @@ export function ShopDashboard() {
                     />
                   </div>
                 </div>
+                <div className="sm:col-span-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    صور المتجر (كحد أقصى 5 صور)
+                  </label>
+                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-brand-border border-dashed rounded-md">
+                    <div className="space-y-1 text-center">
+                      <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
+                      <div className="flex text-sm text-brand-secondary justify-center">
+                        <label
+                          htmlFor="shop-file-upload"
+                          className="relative cursor-pointer bg-white rounded-md font-medium text-brand-primary hover:text-brand-primary focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-brand-primary"
+                        >
+                          <span>اختر صور</span>
+                          <input id="shop-file-upload" name="shop-file-upload" type="file" className="sr-only" multiple accept="image/*" onChange={handleShopImageChange} disabled={shopImageFiles.length + (shop.imageUrls?.length || 0) >= 5 || uploadingShopImages} />
+                        </label>
+                        <p className="ps-1">أو اسحب وأفلت هنا</p>
+                      </div>
+                      <p className="text-xs text-brand-secondary">PNG, JPG, GIF حتى 10 ميجابايت</p>
+                    </div>
+                  </div>
+                  
+                  {/* Existing Shop Images */}
+                  {shop.imageUrls && shop.imageUrls.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">الصور الحالية:</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                        {shop.imageUrls.map((url, index) => (
+                          <div key={`existing-${index}`} className="relative group rounded-md overflow-hidden border border-brand-border">
+                            <img
+                              src={url}
+                              alt={`Shop Image ${index}`}
+                              className="h-24 w-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeExistingShopImage(url)}
+                              className="absolute top-0 right-0 bg-red-500/90 text-white rounded-bl-lg min-w-[44px] min-h-[44px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                            >
+                              <X className="h-5 w-5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* New Shop Images to Upload */}
+                  {shopImageFiles.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">الصور الجديدة (سيتم رفعها عند الحفظ):</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                        {shopImageFiles.map((file, index) => (
+                          <div key={`new-${index}`} className="relative group rounded-md overflow-hidden border border-brand-border">
+                            <img
+                              src={URL.createObjectURL(file)}
+                              alt={`Preview ${index}`}
+                              className="h-24 w-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeShopImageFile(index)}
+                              className="absolute top-0 right-0 bg-red-500/90 text-white rounded-bl-lg min-w-[44px] min-h-[44px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                            >
+                              <X className="h-5 w-5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex justify-end mt-6">
                 <button
                   type="submit"
-                  className="w-full sm:w-auto inline-flex justify-center items-center px-6 min-h-[44px] border border-transparent shadow-sm text-sm font-bold rounded-lg text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary transition-colors"
+                  disabled={uploadingShopImages}
+                  className="w-full sm:w-auto inline-flex justify-center items-center px-6 min-h-[44px] border border-transparent shadow-sm text-sm font-bold rounded-lg text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary transition-colors disabled:opacity-50"
                 >
-                  حفظ التغييرات
+                  {uploadingShopImages ? 'جاري الحفظ...' : 'حفظ التغييرات'}
                 </button>
               </div>
             </form>

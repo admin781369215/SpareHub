@@ -121,6 +121,15 @@ export function BottomNav() {
             <span className="text-[10px] font-medium">طلباتي</span>
           </Link>
           
+          <Link 
+            to="/?tab=wishlist" 
+            onClick={() => setIsAccountMenuOpen(false)}
+            className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${location.search.includes('tab=wishlist') ? 'text-brand-primary' : 'text-brand-secondary'}`}
+          >
+            <Heart className={`w-6 h-6 ${location.search.includes('tab=wishlist') ? 'fill-current' : ''}`} />
+            <span className="text-[10px] font-medium">المفضلة</span>
+          </Link>
+          
           <button 
             onClick={(e) => {
               setIsAccountMenuOpen(false);

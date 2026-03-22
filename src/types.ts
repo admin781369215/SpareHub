@@ -5,6 +5,7 @@ export interface User {
   email: string;
   displayName?: string;
   role: Role;
+  country?: string;
   createdAt: string;
 }
 
@@ -13,6 +14,7 @@ export interface Shop {
   ownerUid: string;
   name: string;
   phone: string;
+  country?: string;
   city: string;
   location?: string;
   latitude?: number;
@@ -31,6 +33,7 @@ export interface Part {
   shopId: string;
   partNumber: string;
   partName: string;
+  description?: string;
   carMake?: string;
   carModel?: string;
   year?: number;

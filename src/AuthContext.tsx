@@ -50,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   await addDoc(collection(db, 'shops'), {
                     ownerUid: firebaseUser.uid,
                     name: 'متجر التجربة',
+                    country: 'SA',
                     city: 'الرياض',
                     phone: '0500000000',
                     rating: 5,
@@ -96,6 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 await addDoc(collection(db, 'shops'), {
                   ownerUid: firebaseUser.uid,
                   name: 'متجر التجربة',
+                  country: 'SA',
                   city: 'الرياض',
                   phone: '0500000000',
                   rating: 5,

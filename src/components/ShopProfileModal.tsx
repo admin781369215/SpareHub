@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, runTransaction } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { Shop, Review } from '../types';
-import { Star, X, MessageSquare, User, Phone, MapPin } from 'lucide-react';
+import { Star, X, MessageSquare, User, Phone, MapPin, Globe } from 'lucide-react';
 import { MapModal } from './MapModal';
+import { ARAB_COUNTRIES } from '../utils/countries';
 
 interface ShopProfileModalProps {
   shop: Shop;
@@ -121,6 +122,8 @@ export function ShopProfileModal({ shop, isOpen, onClose, canReview = true }: Sh
 
   if (!isOpen) return null;
 
+  const countryName = shop.country ? ARAB_COUNTRIES.find(c => c.code === shop.country)?.name || shop.country : '';
+
   return (
     <>
     <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -161,6 +164,21 @@ export function ShopProfileModal({ shop, isOpen, onClose, canReview = true }: Sh
                   <span className="text-brand-secondary text-sm">
                     ({shop.reviewCount || 0} تقييم)
                   </span>
+                </div>
+                
+                <div className="flex flex-col gap-2 text-sm text-gray-600 mt-4">
+                  {countryName && (
+                    <div className="flex items-center gap-2">
+                      <Globe className="w-4 h-4 text-brand-secondary" />
+                      <span>{countryName}</span>
+                    </div>
+                  )}
+                  {(shop.location || shop.city) && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-brand-secondary" />
+                      <span>{shop.location || shop.city}</span>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="flex gap-2 mt-4">

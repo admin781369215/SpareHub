@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Part } from '../types';
 import { doc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import { handleFirestoreError, OperationType } from '../utils/firestore-errors';
 import { X, Tag, DollarSign, Package, Image as ImageIcon } from 'lucide-react';
@@ -75,7 +75,7 @@ export function EditPartModal({ part, onClose }: EditPartModalProps) {
       if (imageFiles.length > 0) {
         for (const file of imageFiles) {
           const storageRef = ref(storage, `parts/${part.id}/${Date.now()}_${file.name}`);
-          const uploadTask = await uploadBytesResumable(storageRef, file);
+          const uploadTask = await uploadBytes(storageRef, file);
           const downloadURL = await getDownloadURL(uploadTask.ref);
           newImageUrls.push(downloadURL);
         }

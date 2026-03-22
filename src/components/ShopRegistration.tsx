@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { addDoc, collection } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../AuthContext';
-import { Store, MapPin, Phone, Building } from 'lucide-react';
+import { Store, MapPin, Phone, Building, Globe } from 'lucide-react';
 import { handleFirestoreError, OperationType } from '../utils/firestore-errors';
+import { ARAB_COUNTRIES } from '../utils/countries';
 
 export function ShopRegistration() {
   const { user, updateRole } = useAuth();
@@ -13,6 +14,7 @@ export function ShopRegistration() {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
+    country: 'SA',
     city: '',
     location: ''
   });
@@ -98,6 +100,31 @@ export function ShopRegistration() {
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="country" className="block text-sm font-medium text-brand-dark">
+                الدولة *
+              </label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
+                  <Globe className="h-5 w-5 text-gray-400" />
+                </div>
+                <select
+                  id="country"
+                  name="country"
+                  required
+                  className="focus:ring-brand-primary focus:border-brand-primary block w-full ps-10 sm:text-sm border-brand-border rounded-md py-2 border appearance-none"
+                  value={formData.country}
+                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                >
+                  {ARAB_COUNTRIES.map(country => (
+                    <option key={country.code} value={country.code}>
+                      {country.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 

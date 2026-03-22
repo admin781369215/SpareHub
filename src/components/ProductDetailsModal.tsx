@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Part, Shop } from '../types';
-import { X, Heart, ShoppingBag, Star, MapPin, Phone, Shield, ChevronRight, ChevronLeft, Info, Package } from 'lucide-react';
+import { X, Heart, ShoppingBag, Star, MapPin, Phone, Shield, ChevronRight, ChevronLeft, Info, Package, Globe } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { CAR_LOGOS } from '../utils/carData';
 import { MapModal } from './MapModal';
+import { ARAB_COUNTRIES } from '../utils/countries';
 
 interface ProductDetailsModalProps {
   part: Part & { shop?: Shop };
@@ -20,6 +21,8 @@ export function ProductDetailsModal({ part, isOpen, onClose, isSaved, onToggleSa
   const carLogo = part.carMake ? CAR_LOGOS[part.carMake] : null;
 
   if (!isOpen) return null;
+
+  const countryName = part.shop.country ? ARAB_COUNTRIES.find(c => c.code === part.shop.country)?.name || part.shop.country : '';
 
   return (
     <>
@@ -173,6 +176,12 @@ export function ProductDetailsModal({ part, isOpen, onClose, isSaved, onToggleSa
                     
                     <div className="space-y-3">
                       <div className="space-y-2 text-sm text-gray-600">
+                        {countryName && (
+                          <div className="flex items-center gap-2">
+                            <Globe className="w-4 h-4 text-brand-secondary" />
+                            <span>{countryName}</span>
+                          </div>
+                        )}
                         {(part.shop.location || part.shop.city) && (
                           <div className="flex items-center gap-2">
                             <MapPin className="w-4 h-4 text-brand-secondary" />

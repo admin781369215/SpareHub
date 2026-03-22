@@ -11,6 +11,7 @@ import { ProductGridItem } from './ProductGridItem';
 import { ProductDetailsModal } from './ProductDetailsModal';
 import { ShopProfileModal } from './ShopProfileModal';
 import { CAR_MAKES, CAR_MODELS, getYears, CAR_LOGOS } from '../utils/carData';
+import { ARAB_COUNTRIES } from '../utils/countries';
 
 export function CustomerDashboard() {
   const { user, signIn } = useAuth();
@@ -43,6 +44,7 @@ export function CustomerDashboard() {
 
   // Filters State
   const [showFilters, setShowFilters] = useState(false);
+  const [filterCountry, setFilterCountry] = useState('');
   const [filterCarMake, setFilterCarMake] = useState('');
   const [filterCarModel, setFilterCarModel] = useState('');
   const [filterYear, setFilterYear] = useState('');
@@ -209,7 +211,7 @@ export function CustomerDashboard() {
     e.preventDefault();
     
     setHasSearched(true);
-    const hasFilters = filterCarMake || filterCarModel || filterYear || filterCondition || filterMinPrice || filterMaxPrice;
+    const hasFilters = filterCountry || filterCarMake || filterCarModel || filterYear || filterCondition || filterMinPrice || filterMaxPrice;
     if (!searchTerm.trim() && !hasFilters) {
       // If empty search, just fetch all parts again
       setLoading(true);
@@ -275,6 +277,9 @@ export function CustomerDashboard() {
         }));
 
       // Apply advanced filters
+      if (filterCountry) {
+        partsWithShops = partsWithShops.filter(p => p.shop?.country === filterCountry);
+      }
       if (filterCarMake) {
         partsWithShops = partsWithShops.filter(p => p.carMake?.toLowerCase().includes(filterCarMake.toLowerCase()));
       }
@@ -336,6 +341,9 @@ export function CustomerDashboard() {
           }));
 
         // Apply advanced filters to similar parts too
+        if (filterCountry) {
+          similarPartsWithShops = similarPartsWithShops.filter(p => p.shop?.country === filterCountry);
+        }
         if (filterCarMake) {
           similarPartsWithShops = similarPartsWithShops.filter(p => p.carMake?.toLowerCase().includes(filterCarMake.toLowerCase()));
         }
@@ -633,6 +641,20 @@ export function CustomerDashboard() {
                 <h2 className="font-bold text-lg text-brand-dark mb-4 border-b border-gray-100 pb-2">تصفية النتائج</h2>
                 
                 <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label htmlFor="filterCountry" className="block text-sm font-medium text-gray-700">الدولة</label>
+                    <select
+                      id="filterCountry"
+                      className="block w-full border-brand-border rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary sm:text-sm py-2"
+                      value={filterCountry}
+                      onChange={(e) => setFilterCountry(e.target.value)}
+                    >
+                      <option value="">كل الدول</option>
+                      {ARAB_COUNTRIES.map(country => (
+                        <option key={country.code} value={country.code}>{country.name}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="space-y-1.5">
                     <label htmlFor="filterCarMake" className="block text-sm font-medium text-gray-700">الشركة المصنعة</label>
                     <select

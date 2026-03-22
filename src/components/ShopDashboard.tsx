@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, getDoc, deleteField } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import { useAuth } from '../AuthContext';
 import { Part, Shop, PartRequest, RequestResponse, AppNotification, Review } from '../types';
-import { Plus, Edit2, Trash2, Package, Tag, DollarSign, Hash, MessageCircle, CheckCircle, Image as ImageIcon, X, Settings, Star, Upload, Download, Clock, XCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Package, Tag, DollarSign, Hash, MessageCircle, CheckCircle, Image as ImageIcon, X, Settings, Star, Upload, Download, Clock, XCircle, Sparkles, Globe } from 'lucide-react';
 import { handleFirestoreError, OperationType } from '../utils/firestore-errors';
 import { CAR_MAKES, CAR_MODELS, getYears } from '../utils/carData';
+import { ARAB_COUNTRIES } from '../utils/countries';
 import { LocationPicker } from './LocationPicker';
 import { EditPartModal } from './EditPartModal';
+import { GoogleGenAI, Type } from '@google/genai';
+import * as XLSX from 'xlsx';
 
 export function ShopDashboard() {
   const { user } = useAuth();
@@ -122,6 +125,7 @@ export function ShopDashboard() {
   const [shopImageFiles, setShopImageFiles] = useState<File[]>([]);
   const [uploadingShopImages, setUploadingShopImages] = useState(false);
   const [isFindingAlternatives, setIsFindingAlternatives] = useState(false);
+  const [isAiImporting, setIsAiImporting] = useState(false);
 
   const handleAddAlternative = () => {
     if (!altInput.trim()) return;
@@ -257,7 +261,7 @@ export function ShopDashboard() {
       
       for (const file of imageFiles) {
         const fileRef = ref(storage, `parts/${shop.id}/${Date.now()}_${file.name}`);
-        const uploadTask = await uploadBytesResumable(fileRef, file);
+        const uploadTask = await uploadBytes(fileRef, file);
         const downloadURL = await getDownloadURL(uploadTask.ref);
         imageUrls.push(downloadURL);
       }
@@ -364,6 +368,99 @@ export function ShopDashboard() {
       e.target.value = ''; // Reset input
     };
     reader.readAsText(file);
+  };
+
+  const handleAiImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !shop) return;
+
+    setIsAiImporting(true);
+    try {
+      // 1. Read file and convert to CSV string
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const csvData = XLSX.utils.sheet_to_csv(worksheet);
+
+      // 2. Call Gemini API
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Extract auto parts inventory from the following raw data export. Map the columns to the provided JSON schema. If a field is missing, use a reasonable default (e.g., condition='new', quantity=1). Return ONLY the JSON array.
+        
+        Raw Data:
+        ${csvData.substring(0, 50000)}`, // Limit size just in case it's huge
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                partName: { type: Type.STRING, description: "Name of the part (e.g., Brake Pad, Oil Filter)" },
+                partNumber: { type: Type.STRING, description: "Part number or SKU" },
+                price: { type: Type.NUMBER, description: "Price of the part" },
+                quantity: { type: Type.INTEGER, description: "Quantity in stock" },
+                carMake: { type: Type.STRING, description: "Car manufacturer (e.g., Toyota)" },
+                carModel: { type: Type.STRING, description: "Car model (e.g., Camry)" },
+                year: { type: Type.STRING, description: "Year of the car" },
+                condition: { type: Type.STRING, description: "Condition: 'new' or 'used'" },
+                location: { type: Type.STRING, description: "Location or section in shop" },
+                shelf: { type: Type.STRING, description: "Shelf number" },
+              },
+              required: ["partName", "price", "quantity"]
+            }
+          }
+        }
+      });
+
+      const jsonStr = response.text?.trim();
+      if (!jsonStr) throw new Error("No data returned from AI");
+      
+      const extractedParts = JSON.parse(jsonStr);
+      
+      let importedCount = 0;
+      for (const part of extractedParts) {
+        if (!part.partName || typeof part.price !== 'number' || typeof part.quantity !== 'number') {
+          continue;
+        }
+        
+        const partData: Omit<Part, 'id'> = {
+          shopId: shop.id,
+          partName: part.partName,
+          partNumber: part.partNumber || '',
+          price: part.price,
+          quantity: part.quantity,
+          carMake: part.carMake || '',
+          carModel: part.carModel || '',
+          year: part.year || '',
+          condition: part.condition === 'used' ? 'used' : 'new',
+          location: part.location || '',
+          shelf: part.shelf || '',
+          compatibleParts: [],
+          createdAt: new Date().toISOString()
+        };
+
+        // Clean up empty fields
+        if (!partData.location) delete partData.location;
+        if (!partData.shelf) delete partData.shelf;
+        if (!partData.carMake) delete partData.carMake;
+        if (!partData.carModel) delete partData.carModel;
+        if (!partData.year) delete partData.year;
+
+        await addDoc(collection(db, 'parts'), partData);
+        importedCount++;
+      }
+
+      alert(`تم استيراد ${importedCount} قطعة بنجاح باستخدام الذكاء الاصطناعي!`);
+    } catch (error) {
+      console.error("AI Import Error:", error);
+      alert("حدث خطأ أثناء استيراد البيانات. يرجى التأكد من صحة الملف والمحاولة مرة أخرى.");
+    } finally {
+      setIsAiImporting(false);
+      e.target.value = ''; // Reset input
+    }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -568,6 +665,30 @@ export function ShopDashboard() {
           >
             <Upload className="-ms-1 me-2 h-5 w-5 text-gray-400" aria-hidden="true" />
             استيراد من CSV
+          </label>
+          <input 
+            type="file" 
+            accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" 
+            className="hidden" 
+            id="aiImportUpload" 
+            onChange={handleAiImport} 
+            disabled={isAiImporting}
+          />
+          <label
+            htmlFor="aiImportUpload"
+            className={`inline-flex items-center justify-center px-4 min-h-[44px] border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors ${isAiImporting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          >
+            {isAiImporting ? (
+              <div className="flex items-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent me-2"></div>
+                جاري الاستخراج...
+              </div>
+            ) : (
+              <>
+                <Sparkles className="-ms-1 me-2 h-5 w-5 text-indigo-100" aria-hidden="true" />
+                استيراد ذكي (AI)
+              </>
+            )}
           </label>
           <button
             onClick={() => {
@@ -1098,7 +1219,7 @@ export function ShopDashboard() {
                           const isApiAlternative = !matchesOriginal && expandedSearchTerms.length > 1;
 
                           return (
-                          <tr key={part.id} className="hover:bg-brand-primary/10 even:bg-gray-100 bg-white transition-colors border-b border-gray-200 last:border-0">
+                          <tr key={part.id} className={`transition-colors border-b border-gray-200 last:border-0 ${quickEdit?.id === part.id ? 'bg-orange-50' : 'hover:bg-orange-50 even:bg-gray-100 bg-white'}`}>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
                                 <div className="flex-shrink-0 h-10 w-10">
@@ -1415,7 +1536,7 @@ export function ShopDashboard() {
                 const newImageUrls: string[] = [];
                 for (const file of shopImageFiles) {
                   const fileRef = ref(storage, `shops/${shop.id}/${Date.now()}_${file.name}`);
-                  const uploadTask = await uploadBytesResumable(fileRef, file);
+                  const uploadTask = await uploadBytes(fileRef, file);
                   const downloadURL = await getDownloadURL(uploadTask.ref);
                   newImageUrls.push(downloadURL);
                 }
@@ -1425,6 +1546,7 @@ export function ShopDashboard() {
                 await updateDoc(doc(db, 'shops', shop.id), {
                   name: shop.name,
                   phone: shop.phone,
+                  country: shop.country || 'SA',
                   city: shop.city,
                   location: shop.location || '',
                   latitude: shop.latitude || null,
@@ -1477,6 +1599,31 @@ export function ShopDashboard() {
                       value={shop.phone}
                       onChange={(e) => setShop({ ...shop, phone: e.target.value })}
                     />
+                  </div>
+                </div>
+
+                <div className="sm:col-span-3">
+                  <label htmlFor="shopCountry" className="block text-sm font-medium text-gray-700">
+                    الدولة
+                  </label>
+                  <div className="mt-1 relative rounded-md shadow-sm">
+                    <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none">
+                      <Globe className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <select
+                      id="shopCountry"
+                      name="shopCountry"
+                      required
+                      className="shadow-sm focus:ring-brand-primary focus:border-brand-primary block w-full ps-10 sm:text-sm border-brand-border rounded-md py-2 border appearance-none"
+                      value={shop.country || 'SA'}
+                      onChange={(e) => setShop({ ...shop, country: e.target.value })}
+                    >
+                      {ARAB_COUNTRIES.map(country => (
+                        <option key={country.code} value={country.code}>
+                          {country.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 

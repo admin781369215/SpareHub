@@ -21,7 +21,7 @@ export function CustomerDashboard() {
   const [hasSearched, setHasSearched] = useState(false);
   const [parts, setParts] = useState<(Part & { shop?: Shop })[]>([]);
   const [similarParts, setSimilarParts] = useState<(Part & { shop?: Shop })[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [shops, setShops] = useState<Record<string, Shop>>({});
   
   // Request Part State
@@ -95,6 +95,8 @@ export function CustomerDashboard() {
         setParts(initialParts);
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, 'shops');
+      } finally {
+        setLoading(false);
       }
     };
     fetchShops();
@@ -747,7 +749,11 @@ export function CustomerDashboard() {
 
             {/* Main Content Area */}
             <div className="w-full md:w-3/4">
-              {parts.length > 0 ? (
+              {loading ? (
+                <div className="flex justify-center items-center py-20">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
+                </div>
+              ) : parts.length > 0 ? (
                 <div>
                   <div className="flex justify-between items-center mb-4 px-4 md:px-0">
                     <h2 className="text-xl font-bold text-brand-dark">

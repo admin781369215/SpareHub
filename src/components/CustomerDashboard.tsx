@@ -92,6 +92,13 @@ export function CustomerDashboard() {
             });
           }
         });
+        // Sort parts: Pro shops first, then Basic, then Free
+        initialParts.sort((a, b) => {
+          const tierOrder = { pro: 3, basic: 2, free: 1 };
+          const aTier = a.shop?.subscriptionTier || 'free';
+          const bTier = b.shop?.subscriptionTier || 'free';
+          return tierOrder[bTier as keyof typeof tierOrder] - tierOrder[aTier as keyof typeof tierOrder];
+        });
         setParts(initialParts);
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, 'shops');
@@ -209,12 +216,11 @@ export function CustomerDashboard() {
     }
   };
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const executeSearch = async (term: string, overrides?: { carMake?: string }) => {
     setHasSearched(true);
-    const hasFilters = filterCountry || filterCarMake || filterCarModel || filterYear || filterCondition || filterMinPrice || filterMaxPrice;
-    if (!searchTerm.trim() && !hasFilters) {
+    const activeFilterCarMake = overrides?.carMake !== undefined ? overrides.carMake : filterCarMake;
+    const hasFilters = filterCountry || activeFilterCarMake || filterCarModel || filterYear || filterCondition || filterMinPrice || filterMaxPrice;
+    if (!term.trim() && !hasFilters) {
       // If empty search, just fetch all parts again
       setLoading(true);
       try {
@@ -229,6 +235,13 @@ export function CustomerDashboard() {
               shop
             });
           }
+        });
+        // Sort parts: Pro shops first, then Basic, then Free
+        allParts.sort((a, b) => {
+          const tierOrder = { pro: 3, basic: 2, free: 1 };
+          const aTier = a.shop?.subscriptionTier || 'free';
+          const bTier = b.shop?.subscriptionTier || 'free';
+          return tierOrder[bTier as keyof typeof tierOrder] - tierOrder[aTier as keyof typeof tierOrder];
         });
         setParts(allParts);
         setSimilarParts([]);
@@ -245,9 +258,9 @@ export function CustomerDashboard() {
       const partsRef = collection(db, 'parts');
       let results = new Map<string, Part>();
 
-      if (searchTerm.trim()) {
-        const qName = query(partsRef, where('partName', '>=', searchTerm), where('partName', '<=', searchTerm + '\uf8ff'));
-        const qNumber = query(partsRef, where('partNumber', '==', searchTerm));
+      if (term.trim()) {
+        const qName = query(partsRef, where('partName', '>=', term), where('partName', '<=', term + '\uf8ff'));
+        const qNumber = query(partsRef, where('partNumber', '==', term));
 
         const [nameSnapshot, numberSnapshot] = await Promise.all([
           getDocs(qName),
@@ -282,8 +295,8 @@ export function CustomerDashboard() {
       if (filterCountry) {
         partsWithShops = partsWithShops.filter(p => p.shop?.country === filterCountry);
       }
-      if (filterCarMake) {
-        partsWithShops = partsWithShops.filter(p => p.carMake?.toLowerCase().includes(filterCarMake.toLowerCase()));
+      if (activeFilterCarMake) {
+        partsWithShops = partsWithShops.filter(p => p.carMake?.toLowerCase().includes(activeFilterCarMake.toLowerCase()));
       }
       if (filterCarModel) {
         partsWithShops = partsWithShops.filter(p => p.carModel?.toLowerCase().includes(filterCarModel.toLowerCase()));
@@ -301,12 +314,20 @@ export function CustomerDashboard() {
         partsWithShops = partsWithShops.filter(p => p.price <= parseFloat(filterMaxPrice));
       }
 
+      // Sort parts: Pro shops first, then Basic, then Free
+      partsWithShops.sort((a, b) => {
+        const tierOrder = { pro: 3, basic: 2, free: 1 };
+        const aTier = a.shop?.subscriptionTier || 'free';
+        const bTier = b.shop?.subscriptionTier || 'free';
+        return tierOrder[bTier as keyof typeof tierOrder] - tierOrder[aTier as keyof typeof tierOrder];
+      });
+
       setParts(partsWithShops);
 
-      if (partsWithShops.length === 0 && searchTerm.trim()) {
+      if (partsWithShops.length === 0 && term.trim()) {
         // Fetch all parts and do a fuzzy search for similar parts
         const allPartsSnapshot = await getDocs(partsRef);
-        const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+        const searchWords = term.toLowerCase().split(/\s+/).filter(w => w.length > 1);
         
         const similarResults = new Map<string, Part>();
         
@@ -346,8 +367,8 @@ export function CustomerDashboard() {
         if (filterCountry) {
           similarPartsWithShops = similarPartsWithShops.filter(p => p.shop?.country === filterCountry);
         }
-        if (filterCarMake) {
-          similarPartsWithShops = similarPartsWithShops.filter(p => p.carMake?.toLowerCase().includes(filterCarMake.toLowerCase()));
+        if (activeFilterCarMake) {
+          similarPartsWithShops = similarPartsWithShops.filter(p => p.carMake?.toLowerCase().includes(activeFilterCarMake.toLowerCase()));
         }
         if (filterCarModel) {
           similarPartsWithShops = similarPartsWithShops.filter(p => p.carModel?.toLowerCase().includes(filterCarModel.toLowerCase()));
@@ -365,6 +386,14 @@ export function CustomerDashboard() {
           similarPartsWithShops = similarPartsWithShops.filter(p => p.price <= parseFloat(filterMaxPrice));
         }
         
+        // Sort similar parts: Pro shops first, then Basic, then Free
+        similarPartsWithShops.sort((a, b) => {
+          const tierOrder = { pro: 3, basic: 2, free: 1 };
+          const aTier = a.shop?.subscriptionTier || 'free';
+          const bTier = b.shop?.subscriptionTier || 'free';
+          return tierOrder[bTier as keyof typeof tierOrder] - tierOrder[aTier as keyof typeof tierOrder];
+        });
+        
         setSimilarParts(similarPartsWithShops);
       } else {
         setSimilarParts([]);
@@ -375,6 +404,44 @@ export function CustomerDashboard() {
       setLoading(false);
     }
   };
+
+  const handleSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    await executeSearch(searchTerm);
+  };
+
+  const lastProcessedSearch = React.useRef<string | null>(null);
+
+  useEffect(() => {
+    if (Object.keys(shops).length === 0) return;
+    
+    const params = new URLSearchParams(location.search);
+    
+    if (lastProcessedSearch.current !== location.search) {
+      lastProcessedSearch.current = location.search;
+      const q = params.get('q');
+      
+      if (q !== null) {
+        setSearchTerm(q);
+        executeSearch(q);
+      } else if (hasSearched && searchTerm !== '') {
+        setSearchTerm('');
+        executeSearch('');
+      }
+    }
+
+    // Handle request modal opening separately to allow it to trigger after sign-in
+    if (params.get('request') === 'true' && !isRequestModalOpen) {
+      if (!user) {
+        // If they landed here directly with ?request=true and aren't logged in
+        signIn();
+      } else {
+        setIsRequestModalOpen(true);
+        // Clean up the URL so it doesn't keep reopening
+        window.history.replaceState({}, '', location.pathname + (params.get('q') ? `?q=${params.get('q')}` : ''));
+      }
+    }
+  }, [location.search, shops, hasSearched, searchTerm, user, isRequestModalOpen, signIn]);
 
   const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -400,6 +467,28 @@ export function CustomerDashboard() {
 
       await addDoc(collection(db, 'partRequests'), requestData);
       
+      // Notify Pro shops about the new request
+      const proShops = (Object.values(shops) as Shop[]).filter(shop => 
+        shop.subscriptionTier === 'pro' && 
+        (shop.status === 'approved' || !shop.status) && 
+        (shop.subscriptionStatus === 'active' || shop.subscriptionStatus === 'trial')
+      );
+
+      for (const shop of proShops) {
+        try {
+          await addDoc(collection(db, 'notifications'), {
+            userId: shop.ownerUid,
+            title: 'طلب خاص جديد',
+            message: `هناك طلب جديد لقطعة: ${requestForm.partName} ${fullCarModel ? `لـ ${fullCarModel}` : ''}`,
+            read: false,
+            type: 'new_request',
+            createdAt: Date.now()
+          });
+        } catch (e) {
+          console.error("Failed to notify pro shop", e);
+        }
+      }
+
       setIsRequestModalOpen(false);
       setRequestForm({ partName: '', partNumber: '', carMake: '', carModel: '', year: '' });
     } catch (error) {
@@ -433,7 +522,7 @@ export function CustomerDashboard() {
                   className="flex flex-col items-center gap-2 min-w-[70px] cursor-pointer" 
                   onClick={() => {
                     setFilterCarMake(cat.name);
-                    handleSearch(new Event('submit') as any);
+                    executeSearch(searchTerm, { carMake: cat.name });
                   }}
                 >
                   <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl border shadow-sm transition-colors overflow-hidden ${
@@ -543,7 +632,7 @@ export function CustomerDashboard() {
                     {['قطع المحرك', 'الفرامل', 'نظام التعليق', 'الفلاتر', 'الإطارات', 'ناقل الحركة'].map(cat => (
                       <li key={cat}>
                         <button 
-                          onClick={() => { setFilterCarMake(''); setSearchTerm(cat); handleSearch(new Event('submit') as any); }}
+                          onClick={() => { setFilterCarMake(''); setSearchTerm(cat); executeSearch(cat, { carMake: '' }); }}
                           className="w-full text-right px-3 py-2 rounded-lg hover:bg-brand-bg hover:text-brand-primary transition-colors text-sm font-medium min-h-[44px]"
                         >
                           {cat}
@@ -581,7 +670,7 @@ export function CustomerDashboard() {
                   <h2 className="text-2xl font-bold mb-4">الفئات الرئيسية</h2>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {categories.slice(0, 4).map((cat, idx) => (
-                      <div key={idx} onClick={() => { setFilterCarMake(cat.name); handleSearch(new Event('submit') as any); }} className="bg-white rounded-xl p-4 border border-brand-border shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col items-center gap-3">
+                      <div key={idx} onClick={() => { setFilterCarMake(cat.name); executeSearch(searchTerm, { carMake: cat.name }); }} className="bg-white rounded-xl p-4 border border-brand-border shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col items-center gap-3">
                         <div className="w-16 h-16 bg-brand-bg rounded-full flex items-center justify-center">
                           {cat.logo ? (
                             <img 
@@ -779,7 +868,7 @@ export function CustomerDashboard() {
                             key={`explore-${idx}`}
                             onClick={() => {
                               setFilterCarMake(cat.name);
-                              handleSearch(new Event('submit') as any);
+                              executeSearch(searchTerm, { carMake: cat.name });
                             }}
                             className="whitespace-nowrap bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-medium px-4 py-2 rounded-full border border-gray-200 transition-colors"
                           >
@@ -808,8 +897,31 @@ export function CustomerDashboard() {
                       );
                     })}
                   </div>
+                  
+                  {hasSearched && (
+                    <div className="mt-8 bg-brand-bg/50 p-6 rounded-xl border border-brand-border text-center">
+                      <h3 className="text-lg font-bold text-brand-dark mb-2">لم تجد القطعة المناسبة؟</h3>
+                      <p className="text-brand-secondary mb-4 text-sm">
+                        يمكنك إرسال طلب خاص بقطعتك وسيقوم أصحاب المحلات بالتواصل معك وتوفيرها لك بأفضل سعر.
+                      </p>
+                      <button
+                        onClick={() => {
+                          if (!user) {
+                            signIn();
+                          } else {
+                            setRequestForm(prev => ({ ...prev, partName: searchTerm }));
+                            setIsRequestModalOpen(true);
+                          }
+                        }}
+                        className="inline-flex items-center px-5 py-2.5 border border-transparent shadow-sm text-sm font-bold rounded-lg text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary transition-all"
+                      >
+                        <Plus className="-mr-1 ml-2 h-4 w-4" aria-hidden="true" />
+                        طلب قطعة غير موجودة
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ) : (
+              ) : hasSearched ? (
                 <div className="bg-white p-12 text-center rounded-lg border border-brand-border shadow-sm">
                   <Package className="mx-auto h-16 w-16 text-gray-300 mb-4" />
                   <h3 className="text-xl font-bold text-brand-dark mb-2">لم يتم العثور على القطعة المطلوبة</h3>
@@ -830,6 +942,14 @@ export function CustomerDashboard() {
                     <Plus className="-mr-1 ml-2 h-5 w-5" aria-hidden="true" />
                     طلب قطعة غير موجودة
                   </button>
+                </div>
+              ) : (
+                <div className="bg-white p-12 text-center rounded-lg border border-brand-border shadow-sm">
+                  <Package className="mx-auto h-16 w-16 text-gray-300 mb-4" />
+                  <h3 className="text-xl font-bold text-brand-dark mb-2">لا توجد قطع متاحة حالياً</h3>
+                  <p className="text-brand-secondary mb-6 max-w-md mx-auto">
+                    لم يتم إضافة أي قطع حتى الآن. يرجى العودة لاحقاً.
+                  </p>
                 </div>
               )}
               
@@ -1006,6 +1126,27 @@ export function CustomerDashboard() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Floating Action Button for Requesting Parts */}
+      {activeTab === 'search' && (
+        <button
+          onClick={() => {
+            if (!user) {
+              signIn();
+            } else {
+              setRequestForm(prev => ({ ...prev, partName: searchTerm }));
+              setIsRequestModalOpen(true);
+            }
+          }}
+          className="fixed bottom-6 left-6 z-40 bg-brand-primary text-white p-4 rounded-full shadow-lg hover:bg-brand-primary-hover hover:scale-105 transition-all flex items-center justify-center group"
+          title="طلب قطعة غير موجودة"
+        >
+          <Plus className="h-6 w-6" />
+          <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-in-out whitespace-nowrap group-hover:ml-2 font-bold">
+            طلب قطعة
+          </span>
+        </button>
       )}
 
       {/* Product Details Modal */}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, runTransaction } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { Shop, Review } from '../types';
-import { Star, X, MessageSquare, User, Phone, MapPin, Globe } from 'lucide-react';
+import { Star, X, MessageSquare, User, Phone, MapPin, Globe, BadgeCheck } from 'lucide-react';
 import { MapModal } from './MapModal';
 import { ARAB_COUNTRIES } from '../utils/countries';
 
@@ -136,9 +136,14 @@ export function ShopProfileModal({ shop, isOpen, onClose, canReview = true }: Sh
           <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="flex justify-between items-start mb-5">
               <div>
-                <h3 className="text-2xl font-bold text-brand-dark" id="modal-title">
-                  {shop.name}
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-2xl font-bold text-brand-dark" id="modal-title">
+                    {shop.name}
+                  </h3>
+                  {shop.isVerified && (
+                    <BadgeCheck className="w-6 h-6 text-blue-500 shrink-0" />
+                  )}
+                </div>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="flex items-center">
                     {shop.rating ? (

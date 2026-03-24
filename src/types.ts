@@ -25,6 +25,8 @@ export interface Shop {
   status?: 'pending' | 'approved' | 'rejected';
   subscriptionStatus?: 'active' | 'expired' | 'trial';
   subscriptionEndDate?: number;
+  subscriptionTier?: 'free' | 'basic' | 'pro';
+  isVerified?: boolean;
   createdAt: string;
 }
 
@@ -82,7 +84,7 @@ export interface AppNotification {
   title: string;
   message: string;
   read: boolean;
-  type: 'request_response' | 'general';
+  type: 'request_response' | 'general' | 'new_request';
   relatedId?: string;
   createdAt: number;
 }

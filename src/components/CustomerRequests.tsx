@@ -152,7 +152,23 @@ export default function CustomerRequests() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-2xl font-bold text-brand-dark mb-8">طلباتي وعروض الأسعار</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-2xl font-bold text-brand-dark">طلباتي وعروض الأسعار</h1>
+        <button
+          onClick={() => {
+            if (!auth.currentUser) {
+              // Should not happen since this page requires auth, but just in case
+              window.location.href = '/?request=true';
+            } else {
+              window.location.href = '/?request=true';
+            }
+          }}
+          className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+        >
+          <Package className="-mr-1 ml-2 h-5 w-5" aria-hidden="true" />
+          طلب قطعة جديدة
+        </button>
+      </div>
 
       {requests.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg shadow">

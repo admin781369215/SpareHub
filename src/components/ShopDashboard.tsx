@@ -4,7 +4,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import { useAuth } from '../AuthContext';
 import { Part, Shop, PartRequest, RequestResponse, AppNotification, Review } from '../types';
-import { Plus, Edit2, Trash2, Package, Tag, DollarSign, Hash, MessageCircle, CheckCircle, Image as ImageIcon, X, Settings, Star, Upload, Download, Clock, XCircle, Sparkles, Globe } from 'lucide-react';
+import { Plus, Edit2, Trash2, Package, Tag, DollarSign, Hash, MessageCircle, CheckCircle, Image as ImageIcon, X, Settings, Star, Upload, Download, Clock, XCircle, Sparkles, Globe, CreditCard, Check } from 'lucide-react';
 import { handleFirestoreError, OperationType } from '../utils/firestore-errors';
 import { CAR_MAKES, CAR_MODELS, getYears } from '../utils/carData';
 import { ARAB_COUNTRIES } from '../utils/countries';
@@ -20,7 +20,7 @@ export function ShopDashboard() {
   const [loading, setLoading] = useState(true);
   const [isAddingPart, setIsAddingPart] = useState(false);
   const [editingPart, setEditingPart] = useState<Part | null>(null);
-  const [activeTab, setActiveTab] = useState<'inventory' | 'requests' | 'settings' | 'reviews'>('inventory');
+  const [activeTab, setActiveTab] = useState<'inventory' | 'requests' | 'settings' | 'reviews' | 'subscription'>('inventory');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedSearchTerms, setExpandedSearchTerms] = useState<string[]>([]);
   const [isSearchingAPI, setIsSearchingAPI] = useState(false);
@@ -254,6 +254,17 @@ export function ShopDashboard() {
 
   const savePart = async (keepOpen: boolean) => {
     if (!shop || !newPart.partName || !newPart.partNumber || newPart.price <= 0 || newPart.quantity < 0) return;
+
+    // Check subscription limits
+    const tier = shop.subscriptionTier || 'free';
+    if (tier === 'free' && parts.length >= 50) {
+      alert('لقد وصلت للحد الأقصى للقطع في الباقة المجانية (50 قطعة). يرجى ترقية باقتك لإضافة المزيد.');
+      return;
+    }
+    if (tier === 'basic' && parts.length >= 500) {
+      alert('لقد وصلت للحد الأقصى للقطع في الباقة الأساسية (500 قطعة). يرجى ترقية باقتك لإضافة المزيد.');
+      return;
+    }
 
     setUploadingImages(true);
     try {
@@ -523,6 +534,22 @@ export function ShopDashboard() {
     e.preventDefault();
     if (!shop || !respondingTo || responseForm.price <= 0 || responseForm.quantity <= 0) return;
 
+    // Check subscription limits
+    const tier = shop.subscriptionTier || 'free';
+    if (tier === 'free') {
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      const responsesThisMonth = myResponses.filter(r => {
+        const d = new Date(r.createdAt);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      }).length;
+      
+      if (responsesThisMonth >= 10) {
+        alert('لقد وصلت للحد الأقصى للردود في الباقة المجانية (10 ردود شهرياً). يرجى ترقية باقتك للرد على المزيد من الطلبات.');
+        return;
+      }
+    }
+
     try {
       const request = customerRequests.find(r => r.id === respondingTo);
       if (!request) return;
@@ -755,6 +782,17 @@ export function ShopDashboard() {
           >
             <Star className="me-2 h-4 w-4" />
             التقييمات
+          </button>
+          <button
+            onClick={() => setActiveTab('subscription')}
+            className={`${
+              activeTab === 'subscription'
+                ? 'border-brand-primary text-brand-primary'
+                : 'border-transparent text-brand-secondary hover:text-gray-700 hover:border-brand-border'
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center min-h-[44px]`}
+          >
+            <CreditCard className="me-2 h-4 w-4" />
+            الاشتراك والباقات
           </button>
         </nav>
       </div>
@@ -1884,6 +1922,157 @@ export function ShopDashboard() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'subscription' && (
+        <div className="space-y-6">
+          <div className="bg-white shadow sm:rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg leading-6 font-medium text-brand-dark mb-4">باقة الاشتراك الحالية</h3>
+              
+              <div className="bg-brand-bg rounded-xl p-6 border border-brand-border mb-8">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="text-xl font-bold text-brand-dark mb-2">
+                      {shop?.subscriptionTier === 'pro' ? 'الباقة الاحترافية (Pro)' : 
+                       shop?.subscriptionTier === 'basic' ? 'الباقة الأساسية (Basic)' : 
+                       'الباقة المجانية (Free)'}
+                    </h4>
+                    <p className="text-brand-secondary mb-4">
+                      {shop?.subscriptionTier === 'pro' ? 'أنت تتمتع بكافة مميزات التطبيق بدون حدود.' : 
+                       shop?.subscriptionTier === 'basic' ? 'باقة ممتازة لزيادة مبيعاتك والوصول لعملاء أكثر.' : 
+                       'باقة تجريبية للبدء في عرض منتجاتك.'}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        shop?.subscriptionStatus === 'active' ? 'bg-green-100 text-green-800' :
+                        shop?.subscriptionStatus === 'trial' ? 'bg-blue-100 text-blue-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {shop?.subscriptionStatus === 'active' ? 'نشط' :
+                         shop?.subscriptionStatus === 'trial' ? 'فترة تجريبية' :
+                         'منتهي'}
+                      </span>
+                      {shop?.subscriptionEndDate && (
+                        <span className="text-sm text-gray-500">
+                          ينتهي في: {new Date(shop.subscriptionEndDate).toLocaleDateString('ar-SA')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-brand-primary mb-1">
+                      {shop?.subscriptionTier === 'pro' ? '399' : 
+                       shop?.subscriptionTier === 'basic' ? '149' : 
+                       '0'}
+                      <span className="text-sm text-gray-500 font-normal"> ريال/شهر</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <h3 className="text-lg leading-6 font-medium text-brand-dark mb-6">ترقية الباقة</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Free Tier */}
+                <div className={`border rounded-xl p-6 relative ${shop?.subscriptionTier === 'free' || !shop?.subscriptionTier ? 'border-brand-primary shadow-md' : 'border-gray-200'}`}>
+                  {(shop?.subscriptionTier === 'free' || !shop?.subscriptionTier) && (
+                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-brand-primary text-white px-3 py-1 rounded-full text-xs font-bold">
+                      باقتك الحالية
+                    </div>
+                  )}
+                  <h4 className="text-xl font-bold text-gray-900 mb-2">الباقة المجانية</h4>
+                  <div className="text-2xl font-bold text-gray-900 mb-4">0 <span className="text-sm text-gray-500 font-normal">ريال/شهر</span></div>
+                  <ul className="space-y-3 mb-6">
+                    <li className="flex items-start gap-2 text-sm text-gray-600">
+                      <Check className="w-5 h-5 text-green-500 shrink-0" />
+                      <span>إضافة حتى 50 قطعة</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm text-gray-600">
+                      <Check className="w-5 h-5 text-green-500 shrink-0" />
+                      <span>الرد على 10 طلبات شهرياً</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm text-gray-600">
+                      <Check className="w-5 h-5 text-green-500 shrink-0" />
+                      <span>ظهور عادي في البحث</span>
+                    </li>
+                  </ul>
+                  <button disabled={shop?.subscriptionTier === 'free' || !shop?.subscriptionTier} className="w-full py-2 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    {shop?.subscriptionTier === 'free' || !shop?.subscriptionTier ? 'مفعلة' : 'اختر الباقة'}
+                  </button>
+                </div>
+
+                {/* Basic Tier */}
+                <div className={`border rounded-xl p-6 relative ${shop?.subscriptionTier === 'basic' ? 'border-brand-primary shadow-md' : 'border-gray-200'}`}>
+                  {shop?.subscriptionTier === 'basic' && (
+                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-brand-primary text-white px-3 py-1 rounded-full text-xs font-bold">
+                      باقتك الحالية
+                    </div>
+                  )}
+                  <h4 className="text-xl font-bold text-gray-900 mb-2">الباقة الأساسية</h4>
+                  <div className="text-2xl font-bold text-gray-900 mb-4">149 <span className="text-sm text-gray-500 font-normal">ريال/شهر</span></div>
+                  <ul className="space-y-3 mb-6">
+                    <li className="flex items-start gap-2 text-sm text-gray-600">
+                      <Check className="w-5 h-5 text-green-500 shrink-0" />
+                      <span>إضافة حتى 500 قطعة</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm text-gray-600">
+                      <Check className="w-5 h-5 text-green-500 shrink-0" />
+                      <span>ردود لامحدودة على الطلبات</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm text-gray-600">
+                      <Check className="w-5 h-5 text-green-500 shrink-0" />
+                      <span>لوحة تحكم إحصائيات بسيطة</span>
+                    </li>
+                  </ul>
+                  <button disabled={shop?.subscriptionTier === 'basic'} className="w-full py-2 px-4 border border-transparent rounded-lg text-sm font-medium text-white bg-brand-primary hover:bg-brand-primary-hover disabled:opacity-50 disabled:cursor-not-allowed">
+                    {shop?.subscriptionTier === 'basic' ? 'مفعلة' : 'ترقية'}
+                  </button>
+                </div>
+
+                {/* Pro Tier */}
+                <div className={`border-2 rounded-xl p-6 relative ${shop?.subscriptionTier === 'pro' ? 'border-brand-primary shadow-md bg-orange-50/30' : 'border-orange-400 bg-orange-50/30'}`}>
+                  {shop?.subscriptionTier === 'pro' ? (
+                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-brand-primary text-white px-3 py-1 rounded-full text-xs font-bold">
+                      باقتك الحالية
+                    </div>
+                  ) : (
+                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+                      الأكثر طلباً
+                    </div>
+                  )}
+                  <h4 className="text-xl font-bold text-gray-900 mb-2">الباقة الاحترافية</h4>
+                  <div className="text-2xl font-bold text-gray-900 mb-4">399 <span className="text-sm text-gray-500 font-normal">ريال/شهر</span></div>
+                  <ul className="space-y-3 mb-6">
+                    <li className="flex items-start gap-2 text-sm text-gray-600">
+                      <Check className="w-5 h-5 text-green-500 shrink-0" />
+                      <span className="font-bold">إضافة عدد لامحدود من القطع</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm text-gray-600">
+                      <Check className="w-5 h-5 text-green-500 shrink-0" />
+                      <span className="font-bold">أولوية الظهور في البحث</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm text-gray-600">
+                      <Check className="w-5 h-5 text-green-500 shrink-0" />
+                      <span className="font-bold">علامة التوثيق (محل موثوق)</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm text-gray-600">
+                      <Check className="w-5 h-5 text-green-500 shrink-0" />
+                      <span>إشعارات SMS فورية</span>
+                    </li>
+                  </ul>
+                  <button disabled={shop?.subscriptionTier === 'pro'} className="w-full py-2 px-4 border border-transparent rounded-lg text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                    {shop?.subscriptionTier === 'pro' ? 'مفعلة' : 'ترقية للباقة الاحترافية'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-8 text-center text-sm text-gray-500">
+                لترقية باقتك، يرجى التواصل مع إدارة التطبيق عبر الواتساب: <a href="https://wa.me/966500000000" className="text-brand-primary font-bold hover:underline" target="_blank" rel="noreferrer">0500000000</a>
+              </div>
+            </div>
           </div>
         </div>
       )}

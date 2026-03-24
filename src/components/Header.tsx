@@ -71,6 +71,15 @@ export function Header() {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q !== null) {
+      setSearchQuery(q);
+    } else {
+      setSearchQuery('');
+    }
+  }, [searchParams]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -130,7 +139,7 @@ export function Header() {
           </div>
 
           {/* Search Bar (Desktop) */}
-          <div className="flex-1 max-w-2xl hidden md:flex mx-8">
+          <div className="flex-1 max-w-2xl hidden md:flex mx-8 items-center gap-2">
             <form onSubmit={handleSearch} className="w-full relative flex items-center bg-[#222] rounded-full shadow-sm overflow-hidden p-1 border border-white/10 focus-within:ring-1 focus-within:ring-white/30 transition-all">
               <Search className="w-5 h-5 text-gray-400 ml-3 shrink-0" />
               <input 
@@ -144,6 +153,18 @@ export function Header() {
                 <Camera className="w-5 h-5" />
               </button>
             </form>
+            <button
+              onClick={() => {
+                if (!user) {
+                  signIn();
+                } else {
+                  navigate('/?request=true');
+                }
+              }}
+              className="whitespace-nowrap bg-brand-primary hover:bg-brand-primary-hover text-white px-4 py-2.5 rounded-full text-sm font-bold transition-colors shadow-sm"
+            >
+              طلب قطعة
+            </button>
           </div>
 
           {/* Icons */}

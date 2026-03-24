@@ -31,6 +31,8 @@ export function ShopRegistration() {
         ownerUid: user.uid,
         rating: 0,
         status: 'pending',
+        subscriptionTier: 'free',
+        isVerified: false,
         createdAt: new Date().toISOString()
       });
 

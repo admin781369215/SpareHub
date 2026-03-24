@@ -28,6 +28,8 @@
         "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
         "subscriptionStatus": { "type": "string", "enum": ["active", "trial", "expired"] },
         "subscriptionEndDate": { "type": "string", "format": "date-time" },
+        "subscriptionTier": { "type": "string", "enum": ["free", "basic", "pro"] },
+        "isVerified": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["ownerUid", "name", "phone", "city", "createdAt"]
@@ -103,7 +105,7 @@
         "title": { "type": "string" },
         "message": { "type": "string" },
         "read": { "type": "boolean" },
-        "type": { "type": "string", "enum": ["request_response", "general"] },
+        "type": { "type": "string", "enum": ["request_response", "general", "new_request"] },
         "relatedId": { "type": "string" },
         "createdAt": { "type": "number" }
       },

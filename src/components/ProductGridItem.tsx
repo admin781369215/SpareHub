@@ -1,6 +1,6 @@
 import React from 'react';
 import { Part, Shop } from '../types';
-import { Heart, Star, ShoppingBag } from 'lucide-react';
+import { Heart, Star, ShoppingBag, BadgeCheck } from 'lucide-react';
 import { CAR_LOGOS } from '../utils/carData';
 import { useCart } from '../contexts/CartContext';
 
@@ -83,11 +83,16 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick }: Produc
 
         {/* Shop & Rating */}
         <div className="flex items-center justify-between mb-2 md:mb-4">
-          <span className="text-[10px] md:text-xs font-medium text-brand-dark truncate max-w-[100px] md:max-w-[120px]">
-            {part.shop?.name || 'محل غير معروف'}
-          </span>
+          <div className="flex items-center gap-1 max-w-[100px] md:max-w-[120px]">
+            <span className="text-[10px] md:text-xs font-medium text-brand-dark truncate">
+              {part.shop?.name || 'محل غير معروف'}
+            </span>
+            {part.shop?.isVerified && (
+              <BadgeCheck className="w-3 h-3 text-blue-500 shrink-0" />
+            )}
+          </div>
           {part.shop?.rating && (
-            <div className="flex items-center gap-0.5">
+            <div className="flex items-center gap-0.5 shrink-0">
               <Star className="w-3 md:w-3.5 h-3 md:h-3.5 text-yellow-500 fill-current" />
               <span className="text-[10px] md:text-xs font-bold text-brand-dark">{part.shop.rating.toFixed(1)}</span>
             </div>

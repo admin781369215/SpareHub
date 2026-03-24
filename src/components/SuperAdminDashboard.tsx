@@ -86,6 +86,29 @@ export function SuperAdminDashboard() {
     }
   };
 
+  const handleUpdateShopTier = async (shopId: string, newTier: 'free' | 'basic' | 'pro') => {
+    try {
+      await updateDoc(doc(db, 'shops', shopId), { subscriptionTier: newTier });
+      setShops(shops.map(shop => shop.id === shopId ? { ...shop, subscriptionTier: newTier } : shop));
+      alert("تم تحديث باقة المتجر بنجاح");
+    } catch (error) {
+      console.error("Error updating shop tier:", error);
+      alert("حدث خطأ أثناء تحديث باقة المتجر");
+    }
+  };
+
+  const handleToggleVerification = async (shopId: string, currentStatus: boolean) => {
+    try {
+      const newStatus = !currentStatus;
+      await updateDoc(doc(db, 'shops', shopId), { isVerified: newStatus });
+      setShops(shops.map(shop => shop.id === shopId ? { ...shop, isVerified: newStatus } : shop));
+      alert(`تم ${newStatus ? 'توثيق' : 'إلغاء توثيق'} المتجر بنجاح`);
+    } catch (error) {
+      console.error("Error toggling shop verification:", error);
+      alert("حدث خطأ أثناء تحديث حالة توثيق المتجر");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -290,8 +313,34 @@ export function SuperAdminDashboard() {
                         الهاتف: <span dir="ltr" className="ml-1">{shop.phone}</span>
                       </p>
                     </div>
-                    <div className="mt-2 flex flex-col items-end text-sm text-brand-secondary sm:mt-0">
+                    <div className="mt-2 flex flex-col items-end text-sm text-brand-secondary sm:mt-0 gap-2">
                       <p>تاريخ التسجيل: {new Date(shop.createdAt).toLocaleDateString('ar-SA')}</p>
+                      
+                      <div className="flex items-center gap-2 mt-1">
+                        <span>الباقة:</span>
+                        <select
+                          value={shop.subscriptionTier || 'free'}
+                          onChange={(e) => handleUpdateShopTier(shop.id, e.target.value as 'free' | 'basic' | 'pro')}
+                          className="text-sm border-gray-300 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary"
+                        >
+                          <option value="free">مجانية</option>
+                          <option value="basic">أساسية</option>
+                          <option value="pro">احترافية</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-1">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={shop.isVerified || false}
+                            onChange={() => handleToggleVerification(shop.id, shop.isVerified || false)}
+                            className="rounded border-gray-300 text-brand-primary focus:ring-brand-primary h-4 w-4"
+                          />
+                          <span className="text-sm">متجر موثق</span>
+                        </label>
+                      </div>
+
                       <p className="mt-1">
                         حالة الاشتراك: 
                         <span className={`ml-2 font-bold ${

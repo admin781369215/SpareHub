@@ -65,7 +65,7 @@ service cloud.firestore {
     }
 
     function isValidShop(data) {
-      return hasOnlyAllowedFields(['ownerUid', 'name', 'phone', 'city', 'location', 'latitude', 'longitude', 'rating', 'reviewCount', 'status', 'createdAt', 'subscriptionStatus', 'subscriptionEndDate']) &&
+      return hasOnlyAllowedFields(['ownerUid', 'name', 'phone', 'city', 'location', 'latitude', 'longitude', 'rating', 'reviewCount', 'status', 'createdAt', 'subscriptionStatus', 'subscriptionEndDate', 'subscriptionTier', 'isVerified']) &&
              data.ownerUid is string && data.ownerUid.size() > 0 && data.ownerUid.size() < 100 &&
              data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
              data.phone is string && data.phone.size() > 0 && data.phone.size() < 50 &&
@@ -78,6 +78,8 @@ service cloud.firestore {
              (!('status' in data) || (data.status in ['pending', 'approved', 'rejected'])) &&
              (!('subscriptionStatus' in data) || (data.subscriptionStatus in ['active', 'trial', 'expired'])) &&
              (!('subscriptionEndDate' in data) || data.subscriptionEndDate is string) &&
+             (!('subscriptionTier' in data) || (data.subscriptionTier in ['free', 'basic', 'pro'])) &&
+             (!('isVerified' in data) || data.isVerified is bool) &&
              data.createdAt is string;
     }
 
@@ -134,7 +136,7 @@ service cloud.firestore {
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
              data.message is string && data.message.size() > 0 && data.message.size() < 500 &&
              data.read is bool &&
-             data.type in ['request_response', 'general'] &&
+             data.type in ['request_response', 'general', 'new_request'] &&
              (!('relatedId' in data) || (data.relatedId is string && data.relatedId.size() < 100)) &&
              data.createdAt is number;
     }

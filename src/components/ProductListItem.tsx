@@ -1,6 +1,6 @@
 import React from 'react';
 import { Part, Shop } from '../types';
-import { Heart, Phone, MapPin, Package, Store, Eye, Car, ShoppingBag } from 'lucide-react';
+import { Heart, Phone, MapPin, Package, Store, Eye, Car, ShoppingBag, BadgeCheck } from 'lucide-react';
 import { CAR_LOGOS } from '../utils/carData';
 import { useCart } from '../contexts/CartContext';
 
@@ -105,11 +105,14 @@ export function ProductListItem({ part, isSaved, onToggleSave, onImageClick }: P
              {part.shop && (
                <div className="flex flex-col gap-0.5 mb-1.5">
                  <div className="flex items-center gap-1 text-xs text-brand-secondary">
-                   <Store className="w-3.5 h-3.5 text-gray-400" />
+                   <Store className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                    <span className="truncate">{part.shop.name}</span>
+                   {part.shop.isVerified && (
+                     <BadgeCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                   )}
                  </div>
                  <div className="flex items-center gap-1 text-xs text-brand-secondary">
-                   <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                   <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                    <span className="truncate">{part.shop.city}</span>
                  </div>
                </div>

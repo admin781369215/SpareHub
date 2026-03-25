@@ -10,16 +10,30 @@ interface ProductGridItemProps {
   isSaved: boolean;
   onToggleSave: (id: string) => void;
   onClick: (part: Part) => void;
+  layout?: 'grid' | 'list';
 }
 
-export function ProductGridItem({ part, isSaved, onToggleSave, onClick }: ProductGridItemProps) {
+export function ProductGridItem({ part, isSaved, onToggleSave, onClick, layout = 'grid' }: ProductGridItemProps) {
   const carLogo = part.carMake ? CAR_LOGOS[part.carMake] : null;
   const { addToCart } = useCart();
 
+  const isList = layout === 'list';
+
   return (
-    <div className="group flex flex-col h-full cursor-pointer" onClick={() => onClick(part)}>
+    <div 
+      className={`group flex h-full cursor-pointer bg-white md:bg-transparent rounded-xl md:rounded-none transition-all ${
+        isList 
+          ? 'flex-row md:flex-col p-3 md:p-0 border-b border-gray-100 md:border-none gap-4 md:gap-0' 
+          : 'flex-col p-0 border-none gap-0'
+      }`} 
+      onClick={() => onClick(part)}
+    >
       {/* Image Container - Flat gray background, rounded corners, no borders */}
-      <div className="relative aspect-square bg-[#f5f5f5] rounded-2xl overflow-hidden mb-3">
+      <div className={`relative bg-[#f5f5f5] overflow-hidden shrink-0 ${
+        isList 
+          ? 'w-28 h-28 md:w-full md:h-auto md:aspect-square rounded-xl md:rounded-2xl md:mb-3' 
+          : 'w-full aspect-square rounded-2xl mb-3'
+      }`}>
         {part.imageUrls && part.imageUrls.length > 0 ? (
           <img 
             src={part.imageUrls[0]} 
@@ -28,7 +42,7 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick }: Produc
             referrerPolicy="no-referrer"
           />
         ) : carLogo ? (
-          <div className="w-full h-full flex items-center justify-center p-8">
+          <div className="w-full h-full flex items-center justify-center p-4 md:p-8">
             <img 
               src={carLogo} 
               alt={part.carMake} 
@@ -42,21 +56,18 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick }: Produc
           </div>
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <span className="text-gray-400 font-medium text-sm">لا توجد صورة</span>
+            <span className="text-gray-400 font-medium text-xs md:text-sm">لا توجد صورة</span>
           </div>
         )}
         
-        {/* Badges */}
-        <div className="absolute top-3 right-3 flex flex-col gap-2">
-          <span className={`text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-full text-white shadow-sm ${part.condition === 'new' ? 'bg-brand-primary' : 'bg-orange-500'}`}>
-            {part.condition === 'new' ? 'جديد' : 'مستعمل'}
-          </span>
-        </div>
-
-        {/* Favorite Button */}
+        {/* Favorite Button - Top Right on Mobile, Top Left on Desktop */}
         <button 
           onClick={(e) => { e.stopPropagation(); onToggleSave(part.id); }} 
-          className="absolute top-3 left-3 w-9 h-9 flex items-center justify-center bg-white rounded-full text-gray-600 hover:text-red-500 shadow-sm transition-colors z-10"
+          className={`absolute flex items-center justify-center bg-white rounded-full text-gray-600 hover:text-red-500 shadow-sm transition-colors z-10 ${
+            isList 
+              ? 'top-2 right-2 md:top-3 md:right-auto md:left-3 w-8 h-8 md:w-9 md:h-9' 
+              : 'top-3 left-3 w-9 h-9'
+          }`}
           aria-label="حفظ في المفضلة"
         >
           <Heart className={`w-4 h-4 ${isSaved ? 'fill-current text-red-500' : ''}`} />
@@ -64,18 +75,20 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick }: Produc
       </div>
 
       {/* Content - No borders, just text on background */}
-      <div className="flex flex-col flex-grow px-1">
-        <h3 className="font-medium text-gray-900 text-sm md:text-base line-clamp-2 hover:underline mb-1">
-          {part.partName}
-        </h3>
+      <div className={`flex flex-col flex-grow px-1 ${isList ? 'py-1 md:py-0 justify-between md:justify-start' : ''}`}>
+        <div>
+          <h3 className="font-medium text-gray-900 text-sm md:text-base line-clamp-2 hover:underline mb-1">
+            {part.partName}
+          </h3>
 
-        <div className="text-xs text-gray-500 mb-2 line-clamp-1">
-          {part.carMake} {part.carModel} {part.year}
+          <div className={`text-xs text-gray-500 line-clamp-1 ${isList ? 'mb-1 md:mb-2' : 'mb-2'}`}>
+            {part.condition === 'new' ? 'جديد' : 'مستعمل'} • {part.carMake} {part.carModel}
+          </div>
         </div>
 
         <div className="mt-auto pt-1">
           <div className="flex items-baseline gap-2">
-            <span className="text-lg md:text-xl font-bold text-gray-900">${part.price}</span>
+            <span className="font-bold text-gray-900 text-lg md:text-xl">${part.price}</span>
           </div>
           
           <div className="flex items-center justify-between mt-1">

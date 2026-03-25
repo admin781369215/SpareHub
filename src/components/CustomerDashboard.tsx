@@ -906,7 +906,7 @@ export function CustomerDashboard() {
                   )}
                   
                   {/* Unified Grid Layout for Mobile and Desktop */}
-                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6 px-4 md:px-0">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-0 md:gap-6 px-0 md:px-0">
                     {parts.map((part) => {
                       const isSaved = savedParts.some(sp => sp.partId === part.id);
                       return (
@@ -919,6 +919,7 @@ export function CustomerDashboard() {
                             setSelectedImagePart(p);
                             setCurrentImageIndex(0);
                           }}
+                          layout="list"
                         />
                       );
                     })}
@@ -987,7 +988,7 @@ export function CustomerDashboard() {
                   </div>
                   
                   {/* Unified Grid Layout for Mobile and Desktop */}
-                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6 px-4 md:px-0">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-0 md:gap-6 px-0 md:px-0">
                     {similarParts.map((part) => {
                       const isSaved = savedParts.some(sp => sp.partId === part.id);
                       return (
@@ -1000,6 +1001,7 @@ export function CustomerDashboard() {
                             setSelectedImagePart(p);
                             setCurrentImageIndex(0);
                           }}
+                          layout="list"
                         />
                       );
                     })}

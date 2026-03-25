@@ -535,7 +535,7 @@ export function CustomerDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-brand-bg pb-12">
+    <div className="min-h-screen bg-white md:bg-brand-bg pb-12">
       {activeTab === 'search' && (
         <div className="max-w-7xl mx-auto md:px-4 sm:px-6 lg:px-8 py-0 md:py-6">
           
@@ -597,7 +597,7 @@ export function CustomerDashboard() {
                 <h2 className="text-lg font-bold text-brand-dark">عروض لك</h2>
                 <button className="text-sm text-brand-primary font-medium">عرض الكل</button>
               </div>
-              <div className="grid grid-cols-2 gap-4 px-4 pb-2">
+              <div className="grid grid-cols-2 gap-3 px-4 pb-2">
                 {parts.slice(0, 6).map((part) => {
                   const isSaved = savedParts.some(sp => sp.partId === part.id);
                   return (
@@ -619,12 +619,12 @@ export function CustomerDashboard() {
 
           {/* Mobile Recent Views */}
           {!hasSearched && parts.length > 3 && (
-            <div className="md:hidden bg-white pt-2 pb-6 border-t border-gray-100">
+            <div className="md:hidden bg-white pt-2 pb-6">
               <div className="px-4 flex justify-between items-center mb-3">
                 <h2 className="text-lg font-bold text-brand-dark">شوهد مؤخراً</h2>
                 <button className="text-sm text-brand-primary font-medium">عرض الكل</button>
               </div>
-              <div className="grid grid-cols-2 gap-4 px-4 pb-2">
+              <div className="grid grid-cols-2 gap-3 px-4 pb-2">
                 {parts.slice(3, 9).map((part) => {
                   const isSaved = savedParts.some(sp => sp.partId === part.id);
                   return (
@@ -650,14 +650,14 @@ export function CustomerDashboard() {
               {/* Sidebar */}
               <div className="w-full md:w-1/4 flex-shrink-0 space-y-6">
                 {/* Categories */}
-                <div className="bg-white rounded-xl shadow-sm border border-brand-border p-4">
+                <div className="bg-white p-4">
                   <h3 className="font-bold text-lg mb-4 border-b pb-2">فئات قطع الغيار</h3>
                   <ul className="space-y-2">
                     {['قطع المحرك', 'الفرامل', 'نظام التعليق', 'الفلاتر', 'الإطارات', 'ناقل الحركة'].map(cat => (
                       <li key={cat}>
                         <button 
                           onClick={() => { setFilterCarMake(''); setSearchTerm(cat); executeSearch(cat, { carMake: '' }); }}
-                          className="w-full text-right px-3 py-2 rounded-lg hover:bg-brand-bg hover:text-brand-primary transition-colors text-sm font-medium min-h-[44px]"
+                          className="w-full text-right px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium min-h-[44px]"
                         >
                           {cat}
                         </button>
@@ -666,12 +666,12 @@ export function CustomerDashboard() {
                   </ul>
                 </div>
                 {/* Offers */}
-                <div className="bg-white rounded-xl shadow-sm border border-brand-border p-4">
+                <div className="bg-white p-4">
                   <h3 className="font-bold text-lg mb-4 border-b pb-2">عروض اليوم</h3>
                   <div className="space-y-3">
-                    <div className="bg-brand-bg p-3 rounded-lg border border-brand-border">
-                      <p className="text-sm font-bold text-brand-dark">خصم 15% على الفحمات</p>
-                      <p className="text-xs text-brand-secondary mt-1">ينتهي العرض قريباً</p>
+                    <div className="bg-[#f5f5f5] p-3 rounded-lg">
+                      <p className="text-sm font-bold text-[#333333]">خصم 15% على الفحمات</p>
+                      <p className="text-xs text-[#767676] mt-1">ينتهي العرض قريباً</p>
                     </div>
                   </div>
                 </div>
@@ -691,10 +691,10 @@ export function CustomerDashboard() {
 
                 {/* Categories Grid */}
                 <div>
-                  <h2 className="text-2xl font-bold mb-4">الفئات الرئيسية</h2>
+                  <h2 className="text-2xl font-bold mb-4 text-[#333333]">الفئات الرئيسية</h2>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {categories.slice(0, 4).map((cat, idx) => (
-                      <div key={idx} onClick={() => { setFilterCarMake(cat.name); executeSearch(searchTerm, { carMake: cat.name }); }} className="bg-gray-50 hover:bg-gray-100 rounded-2xl p-4 transition-all cursor-pointer flex flex-col items-center gap-3">
+                      <div key={idx} onClick={() => { setFilterCarMake(cat.name); executeSearch(searchTerm, { carMake: cat.name }); }} className="bg-[#f5f5f5] hover:bg-gray-200 rounded-2xl p-4 transition-all cursor-pointer flex flex-col items-center gap-3">
                         <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm">
                           {cat.logo ? (
                             <img 
@@ -711,7 +711,7 @@ export function CustomerDashboard() {
                             <Car className="w-8 h-8 text-brand-secondary" />
                           )}
                         </div>
-                        <span className="font-bold text-brand-dark">{cat.name}</span>
+                        <span className="font-bold text-[#333333]">{cat.name}</span>
                       </div>
                     ))}
                   </div>
@@ -719,8 +719,8 @@ export function CustomerDashboard() {
 
                 {/* Trending Products */}
                 <div>
-                  <h2 className="text-2xl font-bold mb-4">المنتجات الرائجة</h2>
-                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  <h2 className="text-2xl font-bold mb-4 text-[#333333]">المنتجات الرائجة</h2>
+                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
                     {parts.slice(0, 4).map(part => (
                       <ProductGridItem 
                         key={part.id} 
@@ -752,15 +752,15 @@ export function CustomerDashboard() {
           <div className={`flex flex-col md:flex-row gap-8 mt-4 md:mt-0 px-4 md:px-0 ${!hasSearched ? 'md:hidden' : ''}`}>
             {/* Sidebar Filters */}
             <div className={`w-full md:w-1/4 flex-shrink-0 ${showFilters ? 'block' : 'hidden md:block'}`}>
-              <div className="bg-white p-5 rounded-lg border border-brand-border sticky top-24">
-                <h2 className="font-bold text-lg text-brand-dark mb-4 border-b border-gray-100 pb-2">تصفية النتائج</h2>
+              <div className="bg-white p-5 sticky top-24">
+                <h2 className="font-bold text-lg text-[#333333] mb-4 border-b border-gray-100 pb-2">تصفية النتائج</h2>
                 
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label htmlFor="filterCountry" className="block text-sm font-medium text-gray-700">الدولة</label>
+                    <label htmlFor="filterCountry" className="block text-sm font-medium text-[#767676]">الدولة</label>
                     <select
                       id="filterCountry"
-                      className="block w-full border-brand-border rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary sm:text-sm py-2"
+                      className="block w-full border-gray-200 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary sm:text-sm py-2"
                       value={filterCountry}
                       onChange={(e) => setFilterCountry(e.target.value)}
                     >
@@ -904,7 +904,7 @@ export function CustomerDashboard() {
                   )}
                   
                   {/* Unified Grid Layout for Mobile and Desktop */}
-                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 px-4 md:px-0">
+                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6 px-4 md:px-0">
                     {parts.map((part) => {
                       const isSaved = savedParts.some(sp => sp.partId === part.id);
                       return (
@@ -985,7 +985,7 @@ export function CustomerDashboard() {
                   </div>
                   
                   {/* Unified Grid Layout for Mobile and Desktop */}
-                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 px-4 md:px-0">
+                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6 px-4 md:px-0">
                     {similarParts.map((part) => {
                       const isSaved = savedParts.some(sp => sp.partId === part.id);
                       return (

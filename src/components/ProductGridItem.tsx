@@ -21,19 +21,11 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick, layout =
 
   return (
     <div 
-      className={`group flex h-full cursor-pointer bg-white md:bg-transparent rounded-xl md:rounded-none transition-all ${
-        isList 
-          ? 'flex-row md:flex-col p-3 md:p-0 border-b border-gray-100 md:border-none gap-4 md:gap-0' 
-          : 'flex-col p-0 border-none gap-0'
-      }`} 
+      className="group flex flex-col h-full cursor-pointer bg-white active:scale-[0.97] transition-transform duration-200 p-0 border-none gap-0"
       onClick={() => onClick(part)}
     >
-      {/* Image Container - Flat gray background, rounded corners, no borders */}
-      <div className={`relative bg-[#f5f5f5] overflow-hidden shrink-0 ${
-        isList 
-          ? 'w-28 h-28 md:w-full md:h-auto md:aspect-square rounded-xl md:rounded-2xl md:mb-3' 
-          : 'w-full aspect-square rounded-2xl mb-3'
-      }`}>
+      {/* Image Container - White background, rounded corners, no borders */}
+      <div className="relative bg-white overflow-hidden shrink-0 w-full aspect-square rounded-2xl mb-2">
         {part.imageUrls && part.imageUrls.length > 0 ? (
           <img 
             src={part.imageUrls[0]} 
@@ -63,7 +55,7 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick, layout =
         {/* Favorite Button */}
         <button 
           onClick={(e) => { e.stopPropagation(); onToggleSave(part.id); }} 
-          className="absolute top-2 right-2 md:top-3 md:right-3 w-8 h-8 md:w-9 md:h-9 flex items-center justify-center bg-white rounded-full text-gray-600 hover:text-red-500 shadow-sm transition-colors z-10"
+          className="absolute top-2 right-2 md:top-3 md:right-3 w-8 h-8 md:w-9 md:h-9 flex items-center justify-center bg-white/80 backdrop-blur-sm rounded-full text-gray-600 hover:text-red-500 transition-colors z-10"
           aria-label="حفظ في المفضلة"
         >
           <Heart className={`w-4 h-4 ${isSaved ? 'fill-current text-red-500' : ''}`} />
@@ -71,10 +63,10 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick, layout =
       </div>
 
       {/* Content - No borders, just text on background */}
-      <div className={`flex flex-col flex-grow px-1 ${isList ? 'py-1 md:py-0 justify-between md:justify-start' : ''}`}>
+      <div className="flex flex-col flex-grow px-1 justify-start">
         <div>
           <div className="flex items-start justify-between gap-2 mb-1">
-            <h3 className="font-medium text-gray-900 text-sm md:text-base line-clamp-2 hover:underline">
+            <h3 className="text-[#333333] text-sm md:text-base line-clamp-2">
               {part.partName}
             </h3>
             <button className="text-gray-400 hover:text-gray-600 shrink-0 mt-0.5" onClick={(e) => e.stopPropagation()}>
@@ -82,7 +74,7 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick, layout =
             </button>
           </div>
 
-          <div className={`text-xs text-gray-500 ${isList ? 'mb-1 md:mb-2' : 'mb-2'}`}>
+          <div className="text-xs text-[#767676] mb-1">
             <div className="truncate">{part.carMake} {part.carModel}</div>
             <div className="truncate">{part.condition === 'new' ? 'جديد' : 'مستعمل'}</div>
           </div>
@@ -90,12 +82,12 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick, layout =
 
         <div className="mt-auto pt-1">
           <div className="flex items-baseline gap-2">
-            <span className="font-bold text-gray-900 text-lg md:text-xl">${part.price}</span>
+            <span className="font-bold text-black text-lg md:text-xl">${part.price}</span>
           </div>
           
           <div className="flex items-center justify-between mt-1">
             <div className="flex items-center gap-1 max-w-[120px]">
-              <span className="text-[10px] md:text-xs text-gray-500 truncate">
+              <span className="text-[10px] md:text-xs text-[#767676] truncate">
                 {part.shop?.name || 'محل غير معروف'}
               </span>
               {part.shop?.isVerified && (
@@ -105,7 +97,7 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick, layout =
             {part.shop?.rating && (
               <div className="flex items-center gap-0.5 shrink-0">
                 <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                <span className="text-[10px] md:text-xs font-medium text-gray-700">{part.shop.rating.toFixed(1)}</span>
+                <span className="text-[10px] md:text-xs font-medium text-[#767676]">{part.shop.rating.toFixed(1)}</span>
               </div>
             )}
           </div>

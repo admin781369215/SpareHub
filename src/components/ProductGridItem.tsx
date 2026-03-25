@@ -21,11 +21,19 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick, layout =
 
   return (
     <div 
-      className="group flex flex-col h-full cursor-pointer bg-white active:scale-[0.97] transition-transform duration-200 p-0 border-none gap-0"
+      className={`group flex cursor-pointer bg-white active:scale-[0.97] transition-transform duration-200 p-0 ${
+        isList 
+          ? 'flex-row md:flex-col py-3 md:py-0 border-b border-gray-200 md:border-none gap-3 md:gap-0 md:h-full' 
+          : 'flex-col border-none gap-0 h-full'
+      }`}
       onClick={() => onClick(part)}
     >
       {/* Image Container - White background, rounded corners, no borders */}
-      <div className="relative bg-white overflow-hidden shrink-0 w-full aspect-square rounded-2xl mb-2">
+      <div className={`relative bg-white overflow-hidden shrink-0 ${
+        isList 
+          ? 'w-[130px] h-[130px] md:w-full md:h-auto md:aspect-square rounded-xl md:rounded-2xl md:mb-2' 
+          : 'w-full aspect-square rounded-2xl mb-2'
+      }`}>
         {part.imageUrls && part.imageUrls.length > 0 ? (
           <img 
             src={part.imageUrls[0]} 
@@ -63,7 +71,7 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick, layout =
       </div>
 
       {/* Content - No borders, just text on background */}
-      <div className="flex flex-col flex-grow px-1 justify-start">
+      <div className={`flex flex-col flex-grow px-1 justify-start ${isList ? 'py-1 md:py-0' : ''}`}>
         <div>
           <div className="flex items-start justify-between gap-2 mb-1">
             <h3 className="text-[#333333] text-sm md:text-base line-clamp-2">

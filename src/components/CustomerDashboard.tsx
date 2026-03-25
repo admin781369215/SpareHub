@@ -474,7 +474,12 @@ export function CustomerDashboard() {
         (shop.subscriptionStatus === 'active' || shop.subscriptionStatus === 'trial')
       );
 
+      const phoneNumbers: string[] = [];
+
       for (const shop of proShops) {
+        if (shop.phone) {
+          phoneNumbers.push(shop.phone);
+        }
         try {
           await addDoc(collection(db, 'notifications'), {
             userId: shop.ownerUid,
@@ -486,6 +491,27 @@ export function CustomerDashboard() {
           });
         } catch (e) {
           console.error("Failed to notify pro shop", e);
+        }
+      }
+
+      // Send SMS/WhatsApp notifications via backend
+      if (phoneNumbers.length > 0) {
+        try {
+          fetch('/api/notify-shops', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              phoneNumbers,
+              partName: requestForm.partName,
+              carMake: requestForm.carMake || 'غير محدد',
+              carModel: requestForm.carModel || 'غير محدد',
+              requestUrl: window.location.origin + '/shop'
+            }),
+          }).catch(err => console.error("Failed to send SMS/WhatsApp notifications:", err));
+        } catch (e) {
+          console.error("Failed to call notify-shops API", e);
         }
       }
 
@@ -525,8 +551,8 @@ export function CustomerDashboard() {
                     executeSearch(searchTerm, { carMake: cat.name });
                   }}
                 >
-                  <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl border shadow-sm transition-colors overflow-hidden ${
-                    filterCarMake === cat.name ? 'bg-brand-primary\/10 border-brand-primary' : 'bg-white border-brand-border'
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl transition-colors overflow-hidden ${
+                    filterCarMake === cat.name ? 'bg-brand-primary/10 ring-2 ring-brand-primary ring-offset-2' : 'bg-gray-50 hover:bg-gray-100'
                   }`}>
                     {cat.logo ? (
                       <img 
@@ -670,8 +696,8 @@ export function CustomerDashboard() {
                   <h2 className="text-2xl font-bold mb-4">الفئات الرئيسية</h2>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {categories.slice(0, 4).map((cat, idx) => (
-                      <div key={idx} onClick={() => { setFilterCarMake(cat.name); executeSearch(searchTerm, { carMake: cat.name }); }} className="bg-white rounded-xl p-4 border border-brand-border shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col items-center gap-3">
-                        <div className="w-16 h-16 bg-brand-bg rounded-full flex items-center justify-center">
+                      <div key={idx} onClick={() => { setFilterCarMake(cat.name); executeSearch(searchTerm, { carMake: cat.name }); }} className="bg-gray-50 hover:bg-gray-100 rounded-2xl p-4 transition-all cursor-pointer flex flex-col items-center gap-3">
+                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm">
                           {cat.logo ? (
                             <img 
                               src={cat.logo} 

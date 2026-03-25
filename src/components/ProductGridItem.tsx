@@ -17,25 +17,22 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick }: Produc
   const { addToCart } = useCart();
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-brand-border overflow-hidden hover:shadow-lg transition-all duration-300 group flex flex-col h-full">
-      {/* Image Container */}
-      <div 
-        className="relative aspect-square bg-brand-bg overflow-hidden cursor-pointer"
-        onClick={() => onClick(part)}
-      >
+    <div className="group flex flex-col h-full cursor-pointer" onClick={() => onClick(part)}>
+      {/* Image Container - Flat gray background, rounded corners, no borders */}
+      <div className="relative aspect-square bg-[#f5f5f5] rounded-2xl overflow-hidden mb-3">
         {part.imageUrls && part.imageUrls.length > 0 ? (
           <img 
             src={part.imageUrls[0]} 
             alt={part.partName} 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+            className="w-full h-full object-cover mix-blend-multiply group-hover:scale-105 transition-transform duration-500" 
             referrerPolicy="no-referrer"
           />
         ) : carLogo ? (
-          <div className="w-full h-full flex items-center justify-center bg-white p-8">
+          <div className="w-full h-full flex items-center justify-center p-8">
             <img 
               src={carLogo} 
               alt={part.carMake} 
-              className="w-full h-full object-contain opacity-60 group-hover:scale-105 transition-transform duration-500" 
+              className="w-full h-full object-contain opacity-20 mix-blend-multiply group-hover:scale-105 transition-transform duration-500" 
               referrerPolicy="no-referrer" 
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none';
@@ -44,14 +41,14 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick }: Produc
             />
           </div>
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-brand-bg">
-            <span className="text-brand-secondary font-medium">لا توجد صورة</span>
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="text-gray-400 font-medium text-sm">لا توجد صورة</span>
           </div>
         )}
         
         {/* Badges */}
         <div className="absolute top-3 right-3 flex flex-col gap-2">
-          <span className={`text-xs font-bold px-2.5 py-1 rounded-full text-white shadow-sm ${part.condition === 'new' ? 'bg-brand-primary' : 'bg-orange-500'}`}>
+          <span className={`text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-full text-white shadow-sm ${part.condition === 'new' ? 'bg-brand-primary' : 'bg-orange-500'}`}>
             {part.condition === 'new' ? 'جديد' : 'مستعمل'}
           </span>
         </div>
@@ -59,66 +56,43 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick }: Produc
         {/* Favorite Button */}
         <button 
           onClick={(e) => { e.stopPropagation(); onToggleSave(part.id); }} 
-          className="absolute top-2 left-2 w-11 h-11 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full text-brand-secondary hover:text-red-500 shadow-sm transition-colors z-10"
+          className="absolute top-3 left-3 w-9 h-9 flex items-center justify-center bg-white rounded-full text-gray-600 hover:text-red-500 shadow-sm transition-colors z-10"
           aria-label="حفظ في المفضلة"
         >
-          <Heart className={`w-5 h-5 ${isSaved ? 'fill-current text-red-500' : ''}`} />
+          <Heart className={`w-4 h-4 ${isSaved ? 'fill-current text-red-500' : ''}`} />
         </button>
       </div>
 
-      {/* Content */}
-      <div className="p-2 md:p-4 flex flex-col flex-grow">
-        <div className="flex justify-between items-start mb-1 md:mb-2">
-          <h3 
-            className="font-bold text-brand-dark text-sm md:text-lg line-clamp-2 cursor-pointer hover:text-brand-primary transition-colors"
-            onClick={() => onClick(part)}
-          >
-            {part.partName}
-          </h3>
-        </div>
+      {/* Content - No borders, just text on background */}
+      <div className="flex flex-col flex-grow px-1">
+        <h3 className="font-medium text-gray-900 text-sm md:text-base line-clamp-2 hover:underline mb-1">
+          {part.partName}
+        </h3>
 
-        <div className="text-xs md:text-sm text-brand-secondary mb-2 md:mb-3 flex-grow">
+        <div className="text-xs text-gray-500 mb-2 line-clamp-1">
           {part.carMake} {part.carModel} {part.year}
         </div>
 
-        {/* Shop & Rating */}
-        <div className="flex items-center justify-between mb-2 md:mb-4">
-          <div className="flex items-center gap-1 max-w-[100px] md:max-w-[120px]">
-            <span className="text-[10px] md:text-xs font-medium text-brand-dark truncate">
-              {part.shop?.name || 'محل غير معروف'}
-            </span>
-            {part.shop?.isVerified && (
-              <BadgeCheck className="w-3 h-3 text-blue-500 shrink-0" />
-            )}
+        <div className="mt-auto pt-1">
+          <div className="flex items-baseline gap-2">
+            <span className="text-lg md:text-xl font-bold text-gray-900">${part.price}</span>
           </div>
-          {part.shop?.rating && (
-            <div className="flex items-center gap-0.5 shrink-0">
-              <Star className="w-3 md:w-3.5 h-3 md:h-3.5 text-yellow-500 fill-current" />
-              <span className="text-[10px] md:text-xs font-bold text-brand-dark">{part.shop.rating.toFixed(1)}</span>
+          
+          <div className="flex items-center justify-between mt-1">
+            <div className="flex items-center gap-1 max-w-[120px]">
+              <span className="text-[10px] md:text-xs text-gray-500 truncate">
+                {part.shop?.name || 'محل غير معروف'}
+              </span>
+              {part.shop?.isVerified && (
+                <BadgeCheck className="w-3 h-3 text-blue-500 shrink-0" />
+              )}
             </div>
-          )}
-        </div>
-
-        {/* Price & Action */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 md:gap-3 mt-auto pt-2 md:pt-4 border-t border-brand-border">
-          <div className="flex flex-col">
-            <span className="text-[10px] md:text-xs text-brand-secondary">السعر</span>
-            <span className="text-base md:text-xl font-bold text-brand-primary">${part.price}</span>
-          </div>
-          <div className="flex gap-1.5 md:gap-2 w-full sm:w-auto">
-            <button 
-              onClick={(e) => { e.stopPropagation(); onClick(part); }}
-              className="flex-1 sm:flex-none bg-brand-bg text-brand-dark hover:bg-brand-primary hover:text-white px-1.5 md:px-3 min-h-[36px] md:min-h-[44px] rounded-lg text-[10px] md:text-xs font-bold transition-colors flex items-center justify-center"
-            >
-              التفاصيل
-            </button>
-            <button 
-              onClick={(e) => { e.stopPropagation(); addToCart(part); }}
-              className="flex-1 sm:flex-none bg-brand-primary text-white hover:bg-brand-primary-hover px-1.5 md:px-3 min-h-[36px] md:min-h-[44px] rounded-lg text-[10px] md:text-xs font-bold transition-colors flex items-center justify-center gap-1"
-            >
-              <ShoppingBag className="w-3.5 h-3.5 md:w-4 md:h-4" />
-              أضف
-            </button>
+            {part.shop?.rating && (
+              <div className="flex items-center gap-0.5 shrink-0">
+                <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                <span className="text-[10px] md:text-xs font-medium text-gray-700">{part.shop.rating.toFixed(1)}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

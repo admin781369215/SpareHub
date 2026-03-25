@@ -95,7 +95,8 @@ export default function CustomerRequests() {
       // Notify the shop owner
       const shopDoc = await getDocs(query(collection(db, 'shops'), where('__name__', '==', shopId)));
       if (!shopDoc.empty) {
-        const shopOwnerUid = shopDoc.docs[0].data().ownerUid;
+        const shopData = shopDoc.docs[0].data() as Shop;
+        const shopOwnerUid = shopData.ownerUid;
         const notificationData: Omit<AppNotification, 'id'> = {
           userId: shopOwnerUid,
           title: 'تم قبول عرضك!',
@@ -106,6 +107,25 @@ export default function CustomerRequests() {
           createdAt: Date.now()
         };
         await addDoc(collection(db, 'notifications'), notificationData);
+
+        // Send SMS/WhatsApp notification if shop is Pro
+        if (shopData.subscriptionTier === 'pro' && shopData.phone) {
+          try {
+            fetch('/api/notify-offer-accepted', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                phoneNumber: shopData.phone,
+                partName: partName,
+                requestUrl: window.location.origin + '/shop'
+              }),
+            }).catch(err => console.error("Failed to send SMS/WhatsApp notification:", err));
+          } catch (e) {
+            console.error("Failed to call notify-offer-accepted API", e);
+          }
+        }
       }
       
       // Note: In a real app, you might want to reject other pending offers here

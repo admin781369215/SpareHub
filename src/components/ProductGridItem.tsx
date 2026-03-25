@@ -1,6 +1,6 @@
 import React from 'react';
 import { Part, Shop } from '../types';
-import { Heart, Star, ShoppingBag, BadgeCheck } from 'lucide-react';
+import { Heart, Star, ShoppingBag, BadgeCheck, MoreVertical } from 'lucide-react';
 import { CAR_LOGOS } from '../utils/carData';
 import { useCart } from '../contexts/CartContext';
 
@@ -60,14 +60,10 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick, layout =
           </div>
         )}
         
-        {/* Favorite Button - Top Right on Mobile, Top Left on Desktop */}
+        {/* Favorite Button */}
         <button 
           onClick={(e) => { e.stopPropagation(); onToggleSave(part.id); }} 
-          className={`absolute flex items-center justify-center bg-white rounded-full text-gray-600 hover:text-red-500 shadow-sm transition-colors z-10 ${
-            isList 
-              ? 'top-2 right-2 md:top-3 md:right-auto md:left-3 w-8 h-8 md:w-9 md:h-9' 
-              : 'top-3 left-3 w-9 h-9'
-          }`}
+          className="absolute top-2 right-2 md:top-3 md:right-3 w-8 h-8 md:w-9 md:h-9 flex items-center justify-center bg-white rounded-full text-gray-600 hover:text-red-500 shadow-sm transition-colors z-10"
           aria-label="حفظ في المفضلة"
         >
           <Heart className={`w-4 h-4 ${isSaved ? 'fill-current text-red-500' : ''}`} />
@@ -77,12 +73,18 @@ export function ProductGridItem({ part, isSaved, onToggleSave, onClick, layout =
       {/* Content - No borders, just text on background */}
       <div className={`flex flex-col flex-grow px-1 ${isList ? 'py-1 md:py-0 justify-between md:justify-start' : ''}`}>
         <div>
-          <h3 className="font-medium text-gray-900 text-sm md:text-base line-clamp-2 hover:underline mb-1">
-            {part.partName}
-          </h3>
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <h3 className="font-medium text-gray-900 text-sm md:text-base line-clamp-2 hover:underline">
+              {part.partName}
+            </h3>
+            <button className="text-gray-400 hover:text-gray-600 shrink-0 mt-0.5" onClick={(e) => e.stopPropagation()}>
+              <MoreVertical className="w-4 h-4" />
+            </button>
+          </div>
 
-          <div className={`text-xs text-gray-500 line-clamp-1 ${isList ? 'mb-1 md:mb-2' : 'mb-2'}`}>
-            {part.condition === 'new' ? 'جديد' : 'مستعمل'} • {part.carMake} {part.carModel}
+          <div className={`text-xs text-gray-500 ${isList ? 'mb-1 md:mb-2' : 'mb-2'}`}>
+            <div className="truncate">{part.carMake} {part.carModel}</div>
+            <div className="truncate">{part.condition === 'new' ? 'جديد' : 'مستعمل'}</div>
           </div>
         </div>
 

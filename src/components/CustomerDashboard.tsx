@@ -597,21 +597,20 @@ export function CustomerDashboard() {
                 <h2 className="text-lg font-bold text-brand-dark">عروض لك</h2>
                 <button className="text-sm text-brand-primary font-medium">عرض الكل</button>
               </div>
-              <div className="flex overflow-x-auto hide-scrollbar gap-4 px-4 pb-2">
-                {parts.slice(0, 5).map((part) => {
+              <div className="grid grid-cols-2 gap-4 px-4 pb-2">
+                {parts.slice(0, 6).map((part) => {
                   const isSaved = savedParts.some(sp => sp.partId === part.id);
                   return (
-                    <div key={`deal-${part.id}`} className="w-[160px] flex-shrink-0">
-                      <ProductGridItem
-                        part={part}
-                        isSaved={isSaved}
-                        onToggleSave={toggleSavePart}
-                        onClick={(p) => {
-                          setSelectedImagePart(p);
-                          setCurrentImageIndex(0);
-                        }}
-                      />
-                    </div>
+                    <ProductGridItem
+                      key={`deal-${part.id}`}
+                      part={part}
+                      isSaved={isSaved}
+                      onToggleSave={toggleSavePart}
+                      onClick={(p) => {
+                        setSelectedImagePart(p);
+                        setCurrentImageIndex(0);
+                      }}
+                    />
                   );
                 })}
               </div>
@@ -625,21 +624,20 @@ export function CustomerDashboard() {
                 <h2 className="text-lg font-bold text-brand-dark">شوهد مؤخراً</h2>
                 <button className="text-sm text-brand-primary font-medium">عرض الكل</button>
               </div>
-              <div className="flex overflow-x-auto hide-scrollbar gap-4 px-4 pb-2">
-                {parts.slice(3, 8).map((part) => {
+              <div className="grid grid-cols-2 gap-4 px-4 pb-2">
+                {parts.slice(3, 9).map((part) => {
                   const isSaved = savedParts.some(sp => sp.partId === part.id);
                   return (
-                    <div key={`recent-${part.id}`} className="w-[160px] flex-shrink-0">
-                      <ProductGridItem
-                        part={part}
-                        isSaved={isSaved}
-                        onToggleSave={toggleSavePart}
-                        onClick={(p) => {
-                          setSelectedImagePart(p);
-                          setCurrentImageIndex(0);
-                        }}
-                      />
-                    </div>
+                    <ProductGridItem
+                      key={`recent-${part.id}`}
+                      part={part}
+                      isSaved={isSaved}
+                      onToggleSave={toggleSavePart}
+                      onClick={(p) => {
+                        setSelectedImagePart(p);
+                        setCurrentImageIndex(0);
+                      }}
+                    />
                   );
                 })}
               </div>
@@ -906,7 +904,7 @@ export function CustomerDashboard() {
                   )}
                   
                   {/* Unified Grid Layout for Mobile and Desktop */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-0 md:gap-6 px-0 md:px-0">
+                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 px-4 md:px-0">
                     {parts.map((part) => {
                       const isSaved = savedParts.some(sp => sp.partId === part.id);
                       return (
@@ -919,7 +917,6 @@ export function CustomerDashboard() {
                             setSelectedImagePart(p);
                             setCurrentImageIndex(0);
                           }}
-                          layout="list"
                         />
                       );
                     })}
@@ -988,7 +985,7 @@ export function CustomerDashboard() {
                   </div>
                   
                   {/* Unified Grid Layout for Mobile and Desktop */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-0 md:gap-6 px-0 md:px-0">
+                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 px-4 md:px-0">
                     {similarParts.map((part) => {
                       const isSaved = savedParts.some(sp => sp.partId === part.id);
                       return (
@@ -1001,7 +998,6 @@ export function CustomerDashboard() {
                             setSelectedImagePart(p);
                             setCurrentImageIndex(0);
                           }}
-                          layout="list"
                         />
                       );
                     })}
